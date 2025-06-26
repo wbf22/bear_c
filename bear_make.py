@@ -1,3 +1,24 @@
+'''
+A simple make program for c and c++ programs. 
+
+Determines files to build with from a make file
+and compiles them with gcc. 
+
+To see an example make file run
+```
+python3 bear_make.py -eg
+```
+
+After making a make file for you code, run this to
+create an executable
+```
+python3 bear_make.py my_make_file
+```
+
+
+'''
+
+
 
 import argparse
 import hashlib
@@ -80,7 +101,7 @@ def hash_file_blake2b(file_path):
 
 
 parser = argparse.ArgumentParser(description="A make program similar to cmake but more simple (hopefully)")
-parser.add_argument('file', help='path to your make file')
+parser.add_argument('file', nargs='?', help='path to your make file')
 parser.add_argument('-eg', '--example', required=False, action='store_true', help='add this flag to output an example make file')
 parser.add_argument('-no', '--no_optimization', required=False, action='store_true', help='instead of keeping object files to speed up builds')
 parser.add_argument('-r', '--release', required=False, action='store_true', help='runs in release mode. otherwise optimization is off and the executable is built for debugging')
@@ -126,6 +147,7 @@ else:
         except Exception as e:
             print("Error on line: ")
             print("\t" + red((str(e))))
+            exit(1)
 
 
     try:
@@ -193,6 +215,8 @@ else:
                         compile_command += ['-g', '-O0']
                     compile_command.append(file)
                     result = subprocess.run(compile_command, capture_output=True, text=True)
+                    if result.returncode != 0:
+                        raise Exception(result.stderr)
                     print(result)
                     root, ext = os.path.splitext(file)
                     object_file = root + '.o'
@@ -224,6 +248,8 @@ else:
         # call gcc
         print(blue('CREATING PROGRAM'))
         result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise Exception(result.stderr)
         print(result)
 
         total_time = time.time() - start_time
@@ -234,5 +260,5 @@ else:
 
 
     except Exception as e:
-        print("Error on line: ")
-        print("\t" + red((str(e))))
+        print(red((str(e))))
+        exit(1)
