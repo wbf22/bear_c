@@ -65,6 +65,9 @@ def red(str: str) -> str:
 def blue(str: str) -> str:
     return print_in_color(str, '\033[38;2;0;7;212m')
 
+def green(str: str) -> str:
+    return print_in_color(str, '\033[38;2;40;133;0m')
+
 def extract_from_quotes(str: str) -> str:
     index = str.index("'")
     content = str[index+1:]
@@ -201,19 +204,20 @@ else:
                 new_path, ext = os.path.splitext('build/' + file)
                 new_path += '.o'
                 recompile = not os.path.exists(new_path) or file not in hashes
-                if new_path in hashes:
-                    old_hash = hashes[new_path]
+                if file in hashes:
+                    old_hash = hashes[file]
                     hash = hash_file_blake2b(file)
                     if old_hash != hash: 
                         recompile = True
 
                 # recompile if needed
                 if recompile:
-                    print(blue('COMPILING ') + file)
+                    print(blue('COMPILING / RECOMPILING ') + file)
                     compile_command = ["gcc", "-c"]
                     if not args.release:
                         compile_command += ['-g', '-O0']
                     compile_command.append(file)
+                    print(green(' '.join(compile_command)))
                     result = subprocess.run(compile_command, capture_output=True, text=True)
                     if result.returncode != 0:
                         raise Exception(result.stderr)
@@ -247,6 +251,7 @@ else:
 
         # call gcc
         print(blue('CREATING PROGRAM'))
+        print(green(' '.join(command)))
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception(result.stderr)

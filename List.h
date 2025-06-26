@@ -56,15 +56,6 @@ size_t len(List* list) {
     return list->len;
 }
 
-static void calc_len_and_set(List* list) {
-    if (list->start < list->end) {
-        list->len = list->end - list->start;   
-    }
-    else {
-        size_t array_len = sizeof(list->data) / sizeof(list->data[0]);
-        list->len = array_len - list->start + list->end;
-    }
-}
 
 /*
     doubles the internal array of the list
@@ -138,13 +129,14 @@ int resize(List* list) {
     may resize interanl size of the list,
     but amoritized is a constant operation
 */
-void push(List* list, char* data) {
+void push(List* list, void* data) {
     
     if (list->len == list->data_size - 1) {
         resize(list);
     }
     list->data[list->end] = data;
     list->end = (list->end + 1) % list->data_size;
+    list->len = list->len + 1;
 }
 
 /*
@@ -152,13 +144,14 @@ void push(List* list, char* data) {
     may resize interanl size of the list,
     but amoritized is a constant operation
 */
-void push_front(List* list, char* data) {
+void push_front(List* list, void* data) {
 
     if (list->len == list->data_size - 1) {
         resize(list);
     }
     list->start = (list->start - 1 + list->data_size) % list->data_size;
     list->data[list->start] = data;
+    list->len = list->len + 1;
 }
 
 /*
@@ -174,8 +167,7 @@ char* pop(List* list) {
     list->end = list->end - 1;
     char* data = list->data[list->end];
     list->data[list->end] = NULL;
-
-    calc_len_and_set(list);
+    list->len = list->len - 1;
 
     return data;
 }
@@ -193,8 +185,7 @@ char* pop_front(List* list) {
     char* data = list->data[list->start];
     list->data[list->start] = NULL;
     list->start = list->start + 1;
-
-    calc_len_and_set(list);
+    list->len = list->len - 1;
 
     return data;
 }
@@ -214,5 +205,25 @@ void free_list(List* list) {
 }
 
 
+
+
+char* g_data(void* ptr, size_t size) {
+    char *data = malloc(size);
+    if (data == NULL) {
+        fprintf(stderr, "Error allocating memory in! Exiting...");
+        exit(EXIT_FAILURE);
+    }
+
+    memcpy(data, ptr, size);
+
+    return data;
+}
+
+
+void p_data(void* dest, size_t size, char* data) {
+
+    memcpy(dest, data, size);
+    free(data);
+}
 
 #endif
