@@ -22,7 +22,7 @@
 
 */
 typedef struct List {
-    char** data; // pointer to array of char pointers
+    void** data; // pointer to array of char pointers
     size_t data_size;
 
     size_t start;
@@ -36,7 +36,7 @@ List* new_list() {
         // handle malloc failure
         return NULL;
     }
-    p_list->data = malloc(10 * sizeof(char*));
+    p_list->data = malloc(10 * sizeof(void*));
     if (p_list->data == NULL) {
         free(p_list);
         return NULL;
@@ -55,6 +55,14 @@ List* new_list() {
 size_t len(List* list) {
     return list->len;
 }
+
+
+
+static void exit_failing() {
+    fprintf(stderr, "List couldn't get more memory on the system! Exiting...");
+    exit(EXIT_FAILURE);
+}
+
 
 
 /*
@@ -85,10 +93,9 @@ int resize(List* list) {
     */
 
     size_t new_size = list->data_size * 2;
-    char** new_data = malloc(new_size * sizeof(char*));
+    void** new_data = malloc(new_size * sizeof(char*));
     if (new_data == NULL) {
-        fprintf(stderr, "List couldn't get more memory on the system! Exiting...");
-        exit(EXIT_FAILURE);
+        exit_failing();
     }
 
     if (list->start > list->end) {
@@ -96,12 +103,12 @@ int resize(List* list) {
         // copy start index to array end
         memcpy(
             new_data, 
-            list->data[list->start], 
+            list->data + list->start, 
             (list->data_size - list->start) * sizeof(char*)
         );
         // copy array start to end index
         memcpy(
-            new_data, 
+            new_data + (list->data_size - list->start), 
             list->data, 
             list->end * sizeof(char*)
         );
@@ -109,7 +116,7 @@ int resize(List* list) {
     else {
         memcpy(
             new_data, 
-            list->data[list->start], 
+            list->data + list->start, 
             (list->end - list->start) * sizeof(char*)
         );
     }
@@ -121,6 +128,7 @@ int resize(List* list) {
     list->start = 0;
     list->end = list->len;
 
+
     return 0;
 }
 
@@ -129,12 +137,18 @@ int resize(List* list) {
     may resize interanl size of the list,
     but amoritized is a constant operation
 */
-void push(List* list, void* data) {
+void push(List* list, void* data, size_t size) {
     
     if (list->len == list->data_size - 1) {
         resize(list);
     }
-    list->data[list->end] = data;
+
+    void* copy = malloc(size);
+    if (copy == NULL) {
+        exit_failing();
+    }
+    memcpy(copy, data, size);
+    list->data[list->end] = copy;
     list->end = (list->end + 1) % list->data_size;
     list->len = list->len + 1;
 }
@@ -144,13 +158,19 @@ void push(List* list, void* data) {
     may resize interanl size of the list,
     but amoritized is a constant operation
 */
-void push_front(List* list, void* data) {
+void push_front(List* list, void* data, size_t size) {
 
     if (list->len == list->data_size - 1) {
         resize(list);
     }
+
+    void* copy = malloc(size);
+    if (copy == NULL) {
+        exit_failing();
+    }
+    memcpy(copy, data, size);
     list->start = (list->start - 1 + list->data_size) % list->data_size;
-    list->data[list->start] = data;
+    list->data[list->start] = copy;
     list->len = list->len + 1;
 }
 
@@ -158,36 +178,38 @@ void push_front(List* list, void* data) {
     removes and retrieves that last element of the list.
     returns NULL when the list is empty
 */
-char* pop(List* list) {
+void pop(List* list, void* dest, size_t size) {
 
     if (list->len == 0) {
-        return NULL;
+        return;
     }
 
-    list->end = list->end - 1;
-    char* data = list->data[list->end];
-    list->data[list->end] = NULL;
-    list->len = list->len - 1;
 
-    return data;
+    list->end = (list->end - 1 + list->data_size) % list->data_size;
+    list->len = list->len - 1;
+    void* data = list->data[list->end];
+    memcpy(dest, data, size);
+    free(data);
+
+    list->data[list->end] = NULL;
 }
 
 /*
     removes and retrieves that first element of the list.
     returns NULL when the list is empty
 */
-char* pop_front(List* list) {
+void pop_front(List* list, void* dest, size_t size) {
 
     if (list->len == 0) {
-        return NULL;
+        return;
     }
 
-    char* data = list->data[list->start];
+    void* data = list->data[list->start];
+    memcpy(dest, data, size);
+    free(data);
     list->data[list->start] = NULL;
-    list->start = list->start + 1;
+    list->start = (list->start + 1) % list->data_size;
     list->len = list->len - 1;
-
-    return data;
 }
 
 /*
@@ -225,5 +247,8 @@ void p_data(void* dest, size_t size, char* data) {
     memcpy(dest, data, size);
     free(data);
 }
+
+
+
 
 #endif

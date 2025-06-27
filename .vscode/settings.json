@@ -2,6 +2,8 @@
     "files.associations": {
         "cstddef": "cpp",
         "cstdlib": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "list.h": "c",
+        "map.h": "c"
     }
 }

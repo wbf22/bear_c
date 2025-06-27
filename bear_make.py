@@ -68,6 +68,9 @@ def blue(str: str) -> str:
 def green(str: str) -> str:
     return print_in_color(str, '\033[38;2;40;133;0m')
 
+def yellow(str: str) -> str:
+    return print_in_color(str, '\033[38;2;214;191;39m')
+
 def extract_from_quotes(str: str) -> str:
     index = str.index("'")
     content = str[index+1:]
@@ -183,14 +186,10 @@ else:
                     for line in file:
                         if '=' in line:
                             file_path, hash = line.split('=')
-                            hashes[file_path] = hash
+                            hashes[file_path] = hash[:-1]
 
 
-            # copy headers and object files
-            for file in headers:
-                copy_path = 'build/' + file
-                os.makedirs(os.path.dirname(copy_path), exist_ok=True)
-                shutil.copy2(file, copy_path)
+            # object files
             for file in object_files:
                 copy_path = 'build/' + file
                 os.makedirs(os.path.dirname(copy_path), exist_ok=True)
@@ -204,11 +203,29 @@ else:
                 new_path, ext = os.path.splitext('build/' + file)
                 new_path += '.o'
                 recompile = not os.path.exists(new_path) or file not in hashes
-                if file in hashes:
-                    old_hash = hashes[file]
-                    hash = hash_file_blake2b(file)
-                    if old_hash != hash: 
-                        recompile = True
+                if not recompile:
+                    # recompile if file has changed
+                    if file in hashes:
+                        old_hash = hashes[file]
+                        hash = hash_file_blake2b(file)
+                        if old_hash != hash: 
+                            recompile = True
+
+                    # recompile if dependencies have changes
+                    if not recompile:
+                        result = subprocess.run(['gcc', '-MM', file], capture_output=True, text=True)
+                        dependencies = result.stdout.split(' ')
+                        dependencies[-1] = dependencies[-1][:-1] # remove new line
+                        if len(dependencies) > 2:
+                            dependencies = dependencies[2:]
+                            for dependency in dependencies:
+                                dep_hash = hash_file_blake2b(dependency)
+                                if dependency not in hashes or hashes[dependency] != dep_hash:
+                                    hashes[dependency] = dep_hash
+                                    recompile = True
+
+
+                    
 
                 # recompile if needed
                 if recompile:
@@ -221,7 +238,8 @@ else:
                     result = subprocess.run(compile_command, capture_output=True, text=True)
                     if result.returncode != 0:
                         raise Exception(result.stderr)
-                    print(result)
+                    if result.stderr != '':
+                        print(yellow(result.stderr))
                     root, ext = os.path.splitext(file)
                     object_file = root + '.o'
                     
