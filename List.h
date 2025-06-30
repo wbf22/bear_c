@@ -13,19 +13,73 @@
     - push_front(...) -> O(1) amoritized
     - pop(...) -> O(1)
     - pop_front(...) -> O(1)
+    - get(...) -> O(1)
+    - set(...) -> O(1)
     - clear() -> O(n)
     - free_list() -> O(n)
     - slice() -> O(n)
 
 
-    This list implementation maintains copies of each element passed in on the heap.
-    When removed from the list, these copies are freed. 
-    
-    When done with your list yoou must call free_list() to avoid memory leaks.
+    This list implementation stores pointers to objects inserted by the user. These
+    object can be on the stack or the heap. Object will NOT be cleaned up with
+    free_list(), only the list's meta data is freed. 
+
+    When done with your list you must call free_list() to avoid memory leaks.
+
+    To update an index in the list do something like this:
+    ```
+    *(int*) get(list, 0) = 14;
+    ```
+
+    or this
+    ```
+    int data = 12;
+    set(list, 0, &data, sizeof(int));
+    ```
+
+
+    Take care inserting objects on the stack. If those objects go out of scope or the objects
+    are overwritten in a loop or something, the list will behave unexpectedly. 
+
+    For example this
+    ```
+
+    List* list = new_list();
+    for (int i = 0; i < 10; i++) {
+        push(list, &i);
+    }
+    for(int i = 0; i < list->len; ++i) {
+        int ele = *(int*) get(list, i);
+        printf("%d, ", ele);
+    }
+    free_list(list);
+    ```
+
+    outputs:
+    ```
+    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 
+    ```
+
+    To insert one through 9 you'd have to do this:
+    ```
+
+    List* list = new_list();
+    for (int i = 0; i < 10; i++) {
+        int* d = malloc(sizeof(int));
+        *d = i;
+        push(list, &d);
+    }
+    for(int i = 0; i < list->len; ++i) {
+        int* ele = (int*) get(list, i);
+        printf("%d, ", *ele);
+        free(ele);
+    }
+    free_list(list);
+    ```
 
 */
 typedef struct List {
-    void** data; // pointer to array of char pointers
+    void** data; // pointer to array of pointers
     size_t data_size;
 
     size_t start;
@@ -150,23 +204,17 @@ int resize(List* list) {
     but amoritized is a constant operation.
 
     A reference to either a stack or heap variable
-    can be passed in. This value's data will be
-    copied to a new pointer on the heap. This data
-    on the heap will be freed when calling pop or
-    clearing the list. (or with the free_list function)
+    can be passed in. This pointer will be stored 
+    in the list. If this data is freed or goes out
+    of scope, the list will be in a bad state.
 */
-void push(List* list, void* data, size_t size) {
+void push(List* list, void* data) {
     
     if (list->len == list->data_size - 1) {
         resize(list);
     }
 
-    void* copy = malloc(size);
-    if (copy == NULL) {
-        list_mem_error_exit_failing();
-    }
-    memcpy(copy, data, size);
-    list->data[list->end] = copy;
+    list->data[list->end] = data;
     list->end = (list->end + 1) % list->data_size;
     list->len = list->len + 1;
 }
@@ -177,65 +225,72 @@ void push(List* list, void* data, size_t size) {
     but amoritized is a constant operation.
 
     A reference to either a stack or heap variable
-    can be passed in. This value's data will be
-    copied to a new pointer on the heap. This data
-    on the heap will be freed when calling pop or
-    clearing the list. (or with the free_list function)
+    can be passed in. This pointer will be stored 
+    in the list. If this data is freed or goes out
+    of scope, the list will be in a bad state.
 */
-void push_front(List* list, void* data, size_t size) {
+void push_front(List* list, void* data) {
 
     if (list->len == list->data_size - 1) {
         resize(list);
     }
 
-    void* copy = malloc(size);
-    if (copy == NULL) {
-        list_mem_error_exit_failing();
-    }
-    memcpy(copy, data, size);
     list->start = (list->start - 1 + list->data_size) % list->data_size;
-    list->data[list->start] = copy;
+    list->data[list->start] = data;
     list->len = list->len + 1;
 }
 
 /*
-    Removes and retrieves that last element of the list
-    copying the data into dest. The data in the list is
-    then freed.
+    Removes and retrieves the last element of the list.
+
+    The data is returned in the form void* and should probably
+    be cast to the correct type:
+    ```
+    List* list = new_list();
+    int i = 10;
+    push(list, &i);
+    int ele = *(int*) pop(list);
+    ```
 */
-void pop(List* list, void* dest, size_t size) {
+void* pop(List* list) {
 
     if (list->len == 0) {
-        return;
+        return NULL;
     }
 
 
     list->end = (list->end - 1 + list->data_size) % list->data_size;
     list->len = list->len - 1;
     void* data = list->data[list->end];
-    memcpy(dest, data, size);
-    free(data);
-
     list->data[list->end] = NULL;
+
+    return data;
 }
 
 /*
-    Removes and retrieves that first element of the list
-    copying the data into dest. The data in the list is
-    then freed.
+    Removes and retrieves the first element of the list.
+
+    The data is returned in the form void* and should probably
+    be cast to the correct type:
+    ```
+    List* list = new_list();
+    int i = 10;
+    push(list, &i);
+    int ele = *(int*) pop(list);
+    ```
 */
-void pop_front(List* list, void* dest, size_t size) {
+void* pop_front(List* list) {
 
     if (list->len == 0) {
-        return;
+        return NULL;
     }
 
     void* data = list->data[list->start];
-    memcpy(dest, data, size);
-    free(data);
     list->data[list->start] = NULL;
     list->start = (list->start + 1) % list->data_size;
     list->len = list->len - 1;
+
+    return data;
 }
 
 
@@ -272,27 +327,14 @@ void* get(List* list, int index) {
 }
 
 /*
-    Replaces an element at the specified index, copying the data
-    in 'data' to the heap. This new heap data will be freed with pop
-    or clear functions (or with the free_list function).
-
-    The existing element at the given index will also be freed.
+    Copies the value in data to the index in the list. No new memory
+    is allocated, and the original pointer inserted at the index is 
+    updated. 
 */
-void set(List* list, int index, void* data, size_t size) {
+void set(List* list, int index, void* data, size_t data_size) {
     int real_index = convert_index(list, index);
-    void* current_data = list->data[real_index];
-    free(current_data);
-
-
-    void* copy = malloc(size);
-    if (copy == NULL) {
-        list_mem_error_exit_failing();
-    }
-    memcpy(copy, data, size);
-    list->data[real_index] = copy;
-
+    memcpy(list->data[real_index], data, data_size);
 }
-
 
 
 
@@ -303,7 +345,7 @@ void set(List* list, int index, void* data, size_t size) {
 void clear(List* list) {
     // Free each pointer inside data
     for (size_t i = 0; i < list->data_size; i++) {
-        free(list->data[i]);
+        list->data[i] = NULL;
     }
     list->len = 0;
     list->start = 0;
@@ -314,7 +356,6 @@ void clear(List* list) {
     frees the list and stored objects
 */
 void free_list(List* list) {
-    clear(list);
     // Free data
     free(list->data);
     // Free the struct itself
@@ -323,18 +364,11 @@ void free_list(List* list) {
 
 
 /*
-    Makes a new list from the specified range (inclusive exclusive). If copy_size
-    is not 0, then each element in the first list will be copied
-    and a copy will be inserted in the resulting list. 
-    If you set copy_size to 0, then the resulting list will share
-    objects with this list. (this is a faster operation though if 
-    you don't care)
-
-    copy_size is the size of the elements in the list. If the list
-    contains elements of different size, then you'll have to slice the list
-    without copying.
+    Makes a new list from the specified range (inclusive exclusive).
+    The resulting list will share objects with this list. (All objects
+    in the list are just pointers to your objects)
 */
-List* slice(List* list, int start, int end, size_t copy_size) {
+List* slice(List* list, int start, int end) {
     while(start < 0) {
         start += list->len;
     }
@@ -347,42 +381,35 @@ List* slice(List* list, int start, int end, size_t copy_size) {
 
     List* new_list = new_list_s(new_len * 2);
 
-    if (copy_size != 0) {
-        for (int i = start; i < end; i++) {
-            void* element = get(list, i);
-            push(new_list, element, copy_size);
-        }
+    if (real_start > real_end) {
+
+        // copy start index to array end
+        memcpy(
+            new_list->data, 
+            list->data + real_start, 
+            (list->data_size - real_start) * sizeof(void*)
+        );
+        // copy array start to end index
+        memcpy(
+            new_list->data + (list->data_size - real_start), 
+            list->data, 
+            real_end * sizeof(void*)
+        );
     }
     else {
-
-        if (real_start > real_end) {
-
-            // copy start index to array end
-            memcpy(
-                new_list->data, 
-                list->data + real_start, 
-                (list->data_size - real_start) * sizeof(void*)
-            );
-            // copy array start to end index
-            memcpy(
-                new_list->data + (list->data_size - real_start), 
-                list->data, 
-                real_end * sizeof(void*)
-            );
-        }
-        else {
-            memcpy(
-                new_list->data, 
-                list->data + real_start, 
-                (real_end - real_start) * sizeof(void*)
-            );
-        }
+        memcpy(
+            new_list->data, 
+            list->data + real_start, 
+            (real_end - real_start) * sizeof(void*)
+        );
     }
 
 
     new_list->start = 0;
     new_list->end = new_len;
     new_list->len = new_len;
+
+    return new_list;
 }
 
 

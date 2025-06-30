@@ -41,56 +41,56 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
     List* list = new_list();
 
 
-    int i = 1;
-    push(list, &i, sizeof(i));
-    i = 2;
-    push(list, &i, sizeof(int));
-    i = 3;
-    push(list, &i, sizeof(int));
-    i = 4;
-    push(list, &i, sizeof(int));
-    i = 5;
-    push(list, &i, sizeof(int));
-    i = 6;
-    push(list, &i, sizeof(int));
-    i = 7;
-    push(list, &i, sizeof(int));
-    i = 8;
-    push(list, &i, sizeof(int));
-    i = 9;
-    push(list, &i, sizeof(int));
-    i = 10;
-    push(list, &i, sizeof(int));
-    i = 11;
-    push(list, &i, sizeof(int));
-    i = 12;
-    push(list, &i, sizeof(int));
+    int i1 = 1;
+    push(list, &i1);
+    int i2 = 2;
+    push(list, &i2);
+    int i3 = 3;
+    push(list, &i3);
+    int i4 = 4;
+    push(list, &i4);
+    int i5 = 5;
+    push(list, &i5);
+    int i6 = 6;
+    push(list, &i6);
+    int i7 = 7;
+    push(list, &i7);
+    int i8 = 8;
+    push(list, &i8);
+    int i9 = 9;
+    push(list, &i9);
+    int i10 = 10;
+    push(list, &i10);
+    int i11 = 11;
+    push(list, &i11);
+    int i12 = 12;
+    push(list, &i12);
 
 
     int b = 0;
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(12 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(11 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(10 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(9 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(8 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(7 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(6 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(5 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(4 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(3 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(2 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(1 == b, "push pop same");
 
     free_list(list);
@@ -99,56 +99,56 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
 
 
     list = new_list();
+    i1 = 1;
+    push_front(list, &i1);
+    i2 = 2;
+    push_front(list, &i2);
+    i3 = 3;
+    push(list, &i3);
+    i4 = 4;
+    push(list, &i4);
+    i5 = 5;
+    push(list, &i5);
+    i6 = 6;
+    push(list, &i6);
+    i7 = 7;
+    push(list, &i7);
+    i8 = 8;
+    push(list, &i8);
+    i9 = 9;
+    push(list, &i9);
+    i10 = 10;
+    push(list, &i10);
+    i11 = 11;
+    push(list, &i11);
+    i12 = 12;
+    push(list, &i12);
 
-    i = 1;
-    push_front(list, &i, sizeof(i));
-    i = 2;
-    push_front(list, &i, sizeof(int));
-    i = 3;
-    push(list, &i, sizeof(int));
-    i = 4;
-    push(list, &i, sizeof(int));
-    i = 5;
-    push(list, &i, sizeof(int));
-    i = 6;
-    push(list, &i, sizeof(int));
-    i = 7;
-    push(list, &i, sizeof(int));
-    i = 8;
-    push(list, &i, sizeof(int));
-    i = 9;
-    push(list, &i, sizeof(int));
-    i = 10;
-    push(list, &i, sizeof(int));
-    i = 11;
-    push(list, &i, sizeof(int));
-    i = 12;
-    push(list, &i, sizeof(int));
 
     b = 0;
-    pop_front(list, &b, sizeof(b));
+    b = *(int*) pop_front(list);
     assert(2 == b, "push pop same");
-    pop_front(list, &b, sizeof(b));
+    b = *(int*) pop_front(list);
     assert(1 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(12 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(11 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(10 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(9 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(8 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(7 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(6 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(5 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(4 == b, "push pop same");
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop(list);
     assert(3 == b, "push pop same");
 
     free_list(list);
@@ -158,45 +158,45 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
 
     list = new_list();
 
-    i = 1;
-    push_front(list, &i, sizeof(i));
-    i = 2;
-    push_front(list, &i, sizeof(int));
-    i = 3;
-    push(list, &i, sizeof(int));
-    i = 4;
-    push(list, &i, sizeof(int));
-    i = 5;
-    push(list, &i, sizeof(int));
-    i = 6;
-    push(list, &i, sizeof(int));
-    i = 7;
-    push(list, &i, sizeof(int));
-    i = 8;
-    push(list, &i, sizeof(int));
-    i = 9;
-    push(list, &i, sizeof(int));
-    i = 10;
-    push(list, &i, sizeof(int));
-    i = 11;
-    push(list, &i, sizeof(int));
-    i = 12;
-    push(list, &i, sizeof(int));
+    i1 = 1;
+    push_front(list, &i1);
+    i2 = 2;
+    push_front(list, &i2);
+    i3 = 3;
+    push(list, &i3);
+    i4 = 4;
+    push(list, &i4);
+    i5 = 5;
+    push(list, &i5);
+    i6 = 6;
+    push(list, &i6);
+    i7 = 7;
+    push(list, &i7);
+    i8 = 8;
+    push(list, &i8);
+    i9 = 9;
+    push(list, &i9);
+    i10 = 10;
+    push(list, &i10);
+    i11 = 11;
+    push(list, &i11);
+    i12 = 12;
+    push(list, &i12);
 
 
     // 2 1 3 4 5 6 7 8 9 10 11 12
     b = 0;
-    pop_front(list, &b, sizeof(b));
-    pop(list, &b, sizeof(b));
-    pop(list, &b, sizeof(b));
+    b = *(int*) pop_front(list);
+    b = *(int*) pop(list);
+    b = *(int*) pop(list);
 
     // 1 3 4 5 6 7 8 9 10
-    i = 13;
-    push(list, &i, sizeof(int));
-    i = 14;
-    push(list, &i, sizeof(int));
-    i = 15;
-    push(list, &i, sizeof(int));
+    int i13 = 13;
+    push(list, &i13);
+    int i14 = 14;
+    push(list, &i14);
+    int i15 = 15;
+    push(list, &i15);
 
     // 1 3 4 5 6 7 8 9 10 13 14 15
     int* t = (int*) get(list, 0);
@@ -205,8 +205,18 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
     assert(*t == 3, "index get");
     t = (int*) get(list, -1);
     assert(*t == 15, "index get");
+    for(int i = 0; i < list->len; ++i) {
+        int ele = *(int*) get(list, i);
+        printf("%d, ", ele);
+    }
+    printf("\n");
 
-    List* slice_list = slice(list, 1, 4, sizeof(i));
+    List* slice_list = slice(list, 1, 4);
+    for(int i = 0; i < slice_list->len; ++i) {
+        int ele = *(int*) get(slice_list, i);
+        printf("%d, ", ele);
+    }
+    printf("\n");
     t = (int*) get(slice_list, 0);
     assert(*t == 3, "slice check");
     t = (int*) get(slice_list, 1);
@@ -223,57 +233,57 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
 
 void map_resizing_all_methods() {
 
-    // // Testing with Structs
-    // typedef struct MyStruct {
-    //     int x;
-    //     int y;
-    // } MyStruct;
+    // Testing with Structs
+    typedef struct MyStruct {
+        int x;
+        int y;
+    } MyStruct;
 
-    // Map* map = new_map();
-    // MyStruct object = {1, 3};
-    // put(map, "my_key", &object);
+    Map* map = new_map();
+    MyStruct object = {1, 3};
+    unique(map, "my_key", &object);
 
-    // MyStruct back_out = *(MyStruct*) at(map, "my_key");
+    MyStruct back_out = *(MyStruct*) at(map, "my_key");
 
-    // erase(map, "my_key");
+    erase(map, "my_key");
 
-    // printf("%d\n", map->len);
-
-
-    // MyStruct object2 = {1, 3};
-    // put(map, "my_key", &object2);
-    // MyStruct object3 = {2, 4};
-    // put(map, "my_key2", &object3);
-
-    // Element** items = map_items(map);
-    // for (int i = 0; i < map->len; ++i) {
-    //     Element* item = items[i];
-    //     char* key = item->key;
-    //     MyStruct obj = *(MyStruct*) item->data;
-
-    //     printf("%s{%d,%d}\n", key, obj.x, obj.y);
-    // }
-    // free(items);
-
-    // free_map(map);
+    printf("%d\n", map->len);
 
 
+    MyStruct object2 = {1, 3};
+    unique(map, "my_key", &object2);
+    MyStruct object3 = {2, 4};
+    unique(map, "my_key2", &object3);
 
-    // // testing resize
-    // map = new_map();
-    // for (int i = 0; i < PRIMES[2]; ++i) {
-    //     int *data = malloc(sizeof(int));
-    //     *data = i * 2;
-    //     int_put(map, i, data);
-    // }
+    Element** items = map_items(map);
+    for (int i = 0; i < map->len; ++i) {
+        Element* item = items[i];
+        char* key = item->key;
+        MyStruct obj = *(MyStruct*) item->data;
 
-    // for (int i = 0; i < PRIMES[2]; ++i) {
-    //     int* data = (int*) int_erase(map, i);        
-    //     assert(*data == i * 2, "check int map");
+        printf("%s{%d,%d}\n", key, obj.x, obj.y);
+    }
+    free(items);
 
-    //     free(data);
-    // }
-    // free_map(map);
+    free_map(map);
+
+
+
+    // testing resize
+    map = new_map();
+    for (int i = 0; i < PRIMES[2]; ++i) {
+        int *data = malloc(sizeof(int));
+        *data = i * 2;
+        int_unique(map, i, data);
+    }
+
+    for (int i = 0; i < PRIMES[2]; ++i) {
+        int* data = (int*) int_erase(map, i);        
+        assert(*data == i * 2, "check int map");
+
+        free(data);
+    }
+    free_map(map);
 
 
 
@@ -290,17 +300,24 @@ void map_resizing_all_methods() {
         ++(*hash_collisions);
         index = (index + hash3(*hash_collisions)) % table_size;
 
-        int count = 0;
+        int* count;
         if (int_contains(checker, index)) {
             void* ptr = int_at(checker, index);
-            count = *(int*) ptr;
-            free(ptr);
+            count = (int*) ptr;
+            // free(ptr);
         }
-        count = count + 1;
-        void* copy = copy_data(&count, sizeof(int));
-        
-        int_put(checker, index, copy);
-        // int d = *(int*) int_at(checker, index);
+        else {
+            count = malloc(sizeof(int));
+            *count = 0;
+            int_unique(checker, index, count);
+        }
+        *count = *count + 1;
+
+        // void* copy = copy_data(&count, sizeof(int));
+        // int_insert(checker, index, copy);
+
+        int d = *(int*) int_at(checker, index);
+        printf("%d\n", d);
     }
     free(hash_collisions);
     
@@ -321,7 +338,65 @@ void map_resizing_all_methods() {
 
 int main() {
 
-    map_resizing_all_methods();
-    
+    // list_test_push_push_front_pop_pop_front_resize_get_set();
+    // map_resizing_all_methods();
+
+
+    typedef struct MyStruct {
+        int x;
+        int y;
+    } MyStruct;
+
+    // insert into map
+    Map* map = new_map();
+    MyStruct object = {1, 3};
+    unique(map, "my_key", &object);
+
+    // update an element (2 ways)
+    MyStruct* back_out = (MyStruct*) at(map, "my_key");
+    back_out->y = 14;
+    back_out = (MyStruct*) at(map, "my_key");
+    printf("{%d,%d}\n",back_out->x, back_out->y);
+
+    MyStruct replacement = {10, 33};
+    insert(map, "my_key", &replacement, sizeof(replacement));
+    back_out = (MyStruct*) at(map, "my_key");
+    printf("{%d,%d}\n",back_out->x, back_out->y);
+
+    // remove element
+    erase(map, "my_key");
+
+    // get map length
+    printf("%d\n", map->len);
+
+    // iterate over map elements
+    for (int i = 0; i < 2; i++) {
+        MyStruct* new_object = malloc(sizeof(MyStruct));
+        new_object->x = 1 + i;
+        new_object->y = 3 + i;
+
+        char key[5];
+        make_key(&i, sizeof(int), key, 5);
+        unique(map, key, new_object);
+    }
+
+    Element** items = map_items(map);
+    for (int i = 0; i < map->len; ++i) {
+        Element* item = items[i];
+        char* key = item->key;
+        MyStruct obj = *(MyStruct*) item->data;
+
+        printf("%s{%d,%d}\n", key, obj.x, obj.y);
+    }
+
+    // clean up
+    for (int i = 0; i < map->len; ++i) {
+        Element* item = items[i];
+        MyStruct* obj = (MyStruct*) item->data;
+        free(obj);
+    }
+    free(items); // map_items allocates memory for the 'items' array
+    free_map(map);
+
     return 0;
 }

@@ -20,21 +20,38 @@ typedef struct Element {
         int y;
     } MyStruct;
 
+    // insert into map
     Map* map = new_map();
     MyStruct object = {1, 3};
-    put(map, "my_key", &object);
+    unique(map, "my_key", &object);
 
-    MyStruct back_out = *(MyStruct*) at(map, "my_key");
+    // update an element (2 ways)
+    MyStruct* back_out = (MyStruct*) at(map, "my_key");
+    back_out->y = 14;
+    back_out = (MyStruct*) at(map, "my_key");
+    printf("{%d,%d}\n",back_out->x, back_out->y);
 
+    MyStruct replacement = {10, 33};
+    insert(map, "my_key", &replacement, sizeof(replacement));
+    back_out = (MyStruct*) at(map, "my_key");
+    printf("{%d,%d}\n",back_out->x, back_out->y);
+
+    // remove element
     erase(map, "my_key");
 
+    // get map length
     printf("%d\n", map->len);
 
+    // iterate over map elements
+    for (int i = 0; i < 2; i++) {
+        MyStruct* new_object = malloc(sizeof(MyStruct));
+        new_object->x = 1 + i;
+        new_object->y = 3 + i;
 
-    MyStruct object2 = {1, 3};
-    put(map, "my_key", &object2);
-    MyStruct object3 = {2, 4};
-    put(map, "my_key2", &object3);
+        char key[5];
+        make_key(&i, sizeof(int), key, 5);
+        unique(map, key, new_object);
+    }
 
     Element** items = map_items(map);
     for (int i = 0; i < map->len; ++i) {
@@ -44,9 +61,16 @@ typedef struct Element {
 
         printf("%s{%d,%d}\n", key, obj.x, obj.y);
     }
-    free(items);
 
+    // clean up
+    for (int i = 0; i < map->len; ++i) {
+        Element* item = items[i];
+        MyStruct* obj = (MyStruct*) item->data;
+        free(obj);
+    }
+    free(items); // map_items allocates memory for the 'items' array
     free_map(map);
+
 
     ```
 
@@ -66,13 +90,13 @@ typedef struct Element {
     # METHODS
 
     Methods with their time complexity
-    - new_map()
-    - put() int_put() any_put() -> O(1) amoritized
+    - insert() int_insert() any_insert() unique() int_unique() any_unique() -> O(1) amoritized
     - at() int_at() any_at() -> O(1) amoritized
     - erase() int_erase() any_erase() -> O(1) amoritized
     - free_map() -> O(n)
     - clear_map() -> O(n)
     - map_items() -> O(n)
+    - contains() int_contains() any_contains() -> O(1) amoritized
 
 
 
@@ -174,19 +198,43 @@ Map* new_map() {
     return new_map_s(PRIMES[0]);
 }
 
+/*
+    Function to hash an object's data into a key. Not necessary for use with
+    this Map implementation, but can be handy. 
 
-void make_key(void* object, size_t object_size, char* output, size_t output_size) {
+    Use like so:
+    ```
+    typedef struct MyStruct {
+        int x;
+        int y;
+        float f;
+    } MyStruct;
+
+    MyStruct my_struct;
+    my_struct.x = 1;
+    my_struct.y = 2;
+    my_struct.f = 19;
+
+    char key[10]; 
+    make_key(&my_struct, sizeof(my_struct), key, 10);
+    printf("%s", key);
+    ```
+*/
+void make_key(void* object, size_t object_size, char* output, size_t output_len) {
     unsigned char* bytes = (unsigned char*)object;
     unsigned long hash = 5381; // Initialize with a prime number (DJB2's initial value)
 
     // Process each byte
     const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
-    for (size_t i = 0; i < output_size; i++) {
+    for (size_t i = 0; i < output_len; i++) {
         char byte = bytes[i % object_size];
-        hash = (hash << 5) + hash + byte;
+        hash = (hash << 5) + hash + byte + 1;
         int index = hash % 36;
         output[i] = charset[index];
     }
+
+    // null terminate
+    output[output_len-1] = '\0';
 }
 
 static size_t hash(void* key, size_t key_size) {
@@ -195,21 +243,6 @@ static size_t hash(void* key, size_t key_size) {
 
     for (size_t i = 0; i < key_size; i++)
         hash = ((hash << 5) + hash) + bytes[i];
-
-    return (size_t)hash;
-}
-
-static size_t hash2(const char *key, size_t key_size) {
-    unsigned char* bytes = (unsigned char*)key;
-    size_t hash = 5381;
-
-    for (size_t i = 0; i < key_size; i++)
-        hash = (hash * 131) + bytes[i];
-
-    // not odd or zero
-    if (hash % 2 == 0) {
-        hash += 1;
-    }
 
     return (size_t)hash;
 }
@@ -274,39 +307,45 @@ void free_map(Map* map) {
 }
 
 
-static void put_no_resize(Map* map, void* key, size_t key_size, void* data) {
+static void insert_no_resize(Map* map, void* key, size_t key_size, void* data, size_t data_size) {
     int hash_collisions = 0;
     size_t index = probe(map, key, key_size, &hash_collisions);
 
 
     // if new element
-    Element *element;
     if (map->data[index] == NULL) {
 
         // copy the key
-        void* key_copy = malloc(key_size);
+        char* key_copy = malloc(key_size);
         if (key_copy == NULL) {
             list_mem_error_exit_failing();
         }
         memcpy(key_copy, key, key_size);
 
         // make a new element
-        element = malloc(sizeof(Element));
+        Element *element = malloc(sizeof(Element));
         if (element == NULL) {
             map_mem_error_exit_failing();
         }
         element->key = key_copy;
         element->key_size = key_size;
+        element->data = data;
+        map->data[index] = element;
 
         ++map->len;
     }
     else {
-        element = map->data[index];
+        if (data_size != -1) {
+            memcpy(map->data[index]->data, data, data_size);
+        }
+        else {
+            fprintf(stderr, "Element already exists. Aborting to avoid leaving an unfreed pointer. (use 'insert()' to overwrite elements or simply retrieve and modify elements) Exiting...");
+            exit(EXIT_FAILURE);
+        }
+
     }
 
-    element->data = data;
 
-    map->data[index] = element;
 }
 
 static void resize_map(Map* map) {
@@ -340,7 +379,7 @@ static void resize_map(Map* map) {
             // an element insert into map
             if (!deleted) {
                 Element* element = map->data[i];
-                put_no_resize(new_map, element->key, element->key_size, element->data);
+                insert_no_resize(new_map, element->key, element->key_size, element->data, -1);
             }
         }
     }
@@ -356,7 +395,7 @@ static void resize_map(Map* map) {
 
 
 /*
-    Function to put an object in the map, with any other object used as the key.
+    Function to insert an object in the map, with any other object used as the key.
 
     This can be used like so:
     ```
@@ -364,13 +403,18 @@ static void resize_map(Map* map) {
     MyStruct key = {1, "hi"};
     MyStruct2 object = {1, 3};
 
-    any_put(map, &key, sizeof(key), object);
+    any_unique(map, &key, sizeof(key), object);
     ```
+    Does not allow overwriting existing elements, as this would leave an
+    unfreed pointer. 
+
+    Use the insert methods to overwrite object, or simply retrieve objects
+    and modify them.
 
 */
-void any_put(Map* map, void* key, size_t key_size, void* data) {
+void any_unique(Map* map, void* key, size_t key_size, void* data) {
 
-    put_no_resize(map, key, key_size, data);
+    insert_no_resize(map, key, key_size, data, -1);
 
     // resize if neeeded
     if (map->data_size * 0.7 < map->len) {
@@ -379,17 +423,65 @@ void any_put(Map* map, void* key, size_t key_size, void* data) {
 }
 
 /*
-    Function to put an object in the map using an int as the key
+    Function to insert an object in the map using an int as the key.
+    Does not allow overwriting existing elements, as this would leave an
+    unfreed pointer. 
+
+    Use the insert methods to overwrite object, or simply retrieve objects
+    and modify them.
 */
-void int_put(Map* map, int key, void* data) {
-    any_put(map, &key, sizeof(int), data);
+void int_unique(Map* map, int key, void* data) {
+    any_unique(map, &key, sizeof(int), data);
 }
 
 /*
-    Function to put an object in the map using a string as they key 
+    Function to insert an object in the map using a string as they key.
+    Does not allow overwriting existing elements, as this would leave an
+    unfreed pointer. 
+
+    Use the insert methods to overwrite object, or simply retrieve objects
+    and modify them.
 */
-void put(Map* map, char* key, void* data) {
-    any_put(map, key, (strlen(key) + 1) * sizeof(char), data);
+void unique(Map* map, char* key, void* data) {
+    any_unique(map, key, (strlen(key) + 1) * sizeof(char), data);
+}
+
+
+/*
+    Function to insert an object in the map, with any other object used as the key.
+
+    This can be used like so:
+    ```
+    Map* map = new_map();
+    MyStruct key = {1, "hi"};
+    MyStruct2 object = {1, 3};
+
+    any_insert(map, &key, sizeof(key), object, sizeof(object));
+    ```
+
+*/
+void any_insert(Map* map, void* key, size_t key_size, void* data, size_t data_size) {
+
+    insert_no_resize(map, key, key_size, data, data_size);
+
+    // resize if neeeded
+    if (map->data_size * 0.7 < map->len) {
+        resize_map(map);
+    }
+}
+
+/*
+    Function to insert an object in the map using an int as the key.
+*/
+void int_insert(Map* map, int key, void* data, size_t data_size) {
+    any_insert(map, &key, sizeof(int), data, data_size);
+}
+
+/*
+    Function to insert an object in the map using a string as the key.
+*/
+void insert(Map* map, char* key, void* data, size_t data_size) {
+    any_insert(map, key, (strlen(key) + 1) * sizeof(char), data, data_size);
 }
 
 
