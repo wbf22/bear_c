@@ -4,6 +4,7 @@
         "cstdlib": "c",
         "type_traits": "c",
         "list.h": "c",
-        "map.h": "c"
+        "map.h": "c",
+        "string.h": "c"
     }
 }

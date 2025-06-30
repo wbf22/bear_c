@@ -6,6 +6,7 @@
 
 valgrind --leak-check=full --show-leak-kinds=all ./test_exe
 
+leaks -atExit -- ./test_exe
 */
 
 char* ANSII_RESET = "\033[0m";
@@ -28,7 +29,12 @@ void assert(int condition, char* message) {
 }
 
 
-
+void* copy_data(void* data, size_t size) {
+    void* ptr = malloc(size);
+    // int c = *(int*) data;
+    memcpy(ptr, data, size);
+    return ptr;
+}
 
 void list_test_push_push_front_pop_pop_front_resize_get_set() {
 
@@ -215,39 +221,107 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
 
 }
 
+void map_resizing_all_methods() {
+
+    // // Testing with Structs
+    // typedef struct MyStruct {
+    //     int x;
+    //     int y;
+    // } MyStruct;
+
+    // Map* map = new_map();
+    // MyStruct object = {1, 3};
+    // put(map, "my_key", &object);
+
+    // MyStruct back_out = *(MyStruct*) at(map, "my_key");
+
+    // erase(map, "my_key");
+
+    // printf("%d\n", map->len);
+
+
+    // MyStruct object2 = {1, 3};
+    // put(map, "my_key", &object2);
+    // MyStruct object3 = {2, 4};
+    // put(map, "my_key2", &object3);
+
+    // Element** items = map_items(map);
+    // for (int i = 0; i < map->len; ++i) {
+    //     Element* item = items[i];
+    //     char* key = item->key;
+    //     MyStruct obj = *(MyStruct*) item->data;
+
+    //     printf("%s{%d,%d}\n", key, obj.x, obj.y);
+    // }
+    // free(items);
+
+    // free_map(map);
+
+
+
+    // // testing resize
+    // map = new_map();
+    // for (int i = 0; i < PRIMES[2]; ++i) {
+    //     int *data = malloc(sizeof(int));
+    //     *data = i * 2;
+    //     int_put(map, i, data);
+    // }
+
+    // for (int i = 0; i < PRIMES[2]; ++i) {
+    //     int* data = (int*) int_erase(map, i);        
+    //     assert(*data == i * 2, "check int map");
+
+    //     free(data);
+    // }
+    // free_map(map);
+
+
+
+    // 
+    Map* checker = new_map();
+
+    char* key = "hi";
+    size_t key_size = (strlen(key) + 1) * sizeof(char);
+    size_t table_size = 57;
+    size_t index = hash(key, key_size) % table_size;
+    int* hash_collisions = malloc(sizeof(int));
+    *hash_collisions = 0;
+    for(int i = 0; i < table_size * 2; ++i) {
+        ++(*hash_collisions);
+        index = (index + hash3(*hash_collisions)) % table_size;
+
+        int count = 0;
+        if (int_contains(checker, index)) {
+            void* ptr = int_at(checker, index);
+            count = *(int*) ptr;
+            free(ptr);
+        }
+        count = count + 1;
+        void* copy = copy_data(&count, sizeof(int));
+        
+        int_put(checker, index, copy);
+        // int d = *(int*) int_at(checker, index);
+    }
+    free(hash_collisions);
+    
+
+
+    for(int i = 0; i < table_size; ++i) {
+        void* ptr = int_erase(checker, i);
+        int count = 0;
+        if (ptr != NULL) {
+            count = *(int*) ptr;
+        }
+        printf("%d %d\n", i, count);
+        free(ptr);
+    }
+    free_map(checker);
+
+}
 
 int main() {
 
-    // Map* map;
-
-    // insert(map, "key", "value", 3 * )
-
-
-    int i = 0;
-    char key[10];
-    make_key(&i, sizeof(i), key, sizeof(key));
-    printf("%s\n", key);
-
-    i = 1;
-    make_key(&i, sizeof(i), key, sizeof(key));
-    printf("%s\n", key);
-
-
-    i = 2;
-    make_key(&i, sizeof(i), key, sizeof(key));
-    printf("%s\n", key);
-
-    i = 3;
-    make_key(&i, sizeof(i), key, sizeof(key));
-    printf("%s\n", key);
-
-    i = 4;
-    make_key(&i, sizeof(i), key, sizeof(key));
-    printf("%s\n", key);
-
-    i = 1235;
-    make_key(&i, sizeof(i), key, sizeof(key));
-    printf("%s\n", key);
-
+    map_resizing_all_methods();
+    
     return 0;
 }
