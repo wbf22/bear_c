@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "List.h"
 #include "Map.h"
+#include "StringStream.h"
 
 /*
 
@@ -336,67 +337,41 @@ void map_resizing_all_methods() {
 
 }
 
+void stringstream_test() {
+
+    StringStream* ss = new_stream();
+
+    append(ss, "hi ");
+    append(ss, "bye! ");
+    append_front(ss, "what ");
+    append_front(ss, "That's ");
+    StringStream* sub = substr(ss, 4, 14);
+    printf("%s\n", str(sub));
+    free_stream(sub);
+    append(ss, "beautiful!");
+    sub = substr(ss, 0, 14);
+    printf("%s\n", str(sub));
+    free_stream(sub);
+
+    char* res = str(ss);
+    printf("%s\n", res);
+
+    ss = replace(ss, "at", "@+");
+    printf("%s\n", str(ss));
+
+
+    free_stream(ss);
+
+}
+
+
 int main() {
 
     // list_test_push_push_front_pop_pop_front_resize_get_set();
     // map_resizing_all_methods();
 
+    stringstream_test();
 
-    typedef struct MyStruct {
-        int x;
-        int y;
-    } MyStruct;
-
-    // insert into map
-    Map* map = new_map();
-    MyStruct object = {1, 3};
-    unique(map, "my_key", &object);
-
-    // update an element (2 ways)
-    MyStruct* back_out = (MyStruct*) at(map, "my_key");
-    back_out->y = 14;
-    back_out = (MyStruct*) at(map, "my_key");
-    printf("{%d,%d}\n",back_out->x, back_out->y);
-
-    MyStruct replacement = {10, 33};
-    insert(map, "my_key", &replacement, sizeof(replacement));
-    back_out = (MyStruct*) at(map, "my_key");
-    printf("{%d,%d}\n",back_out->x, back_out->y);
-
-    // remove element
-    erase(map, "my_key");
-
-    // get map length
-    printf("%d\n", map->len);
-
-    // iterate over map elements
-    for (int i = 0; i < 2; i++) {
-        MyStruct* new_object = malloc(sizeof(MyStruct));
-        new_object->x = 1 + i;
-        new_object->y = 3 + i;
-
-        char key[5];
-        make_key(&i, sizeof(int), key, 5);
-        unique(map, key, new_object);
-    }
-
-    Element** items = map_items(map);
-    for (int i = 0; i < map->len; ++i) {
-        Element* item = items[i];
-        char* key = item->key;
-        MyStruct obj = *(MyStruct*) item->data;
-
-        printf("%s{%d,%d}\n", key, obj.x, obj.y);
-    }
-
-    // clean up
-    for (int i = 0; i < map->len; ++i) {
-        Element* item = items[i];
-        MyStruct* obj = (MyStruct*) item->data;
-        free(obj);
-    }
-    free(items); // map_items allocates memory for the 'items' array
-    free_map(map);
 
     return 0;
 }

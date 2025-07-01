@@ -120,15 +120,6 @@ List* new_list() {
 
 
 /*
-    returns the length of a list
-*/
-size_t len(List* list) {
-    return list->len;
-}
-
-
-
-/*
     doubles the internal array of the list
 
     returns 0 if successful
@@ -297,17 +288,12 @@ void* pop_front(List* list) {
 
 static int convert_index(List* list, int index) {
 
+
     while (index < 0) {
         index += list->len;
     }
 
-    return (list->start + index) % list->data_size;
-}
-
-static void check_bounds(List* list, int index) {
-
-    int in_bounds = index >= 0 && index < list->len;
-
+    int in_bounds = index < list->len;
     if (!in_bounds) {
         fprintf(stderr, "Index ");
         fprintf(stderr, "%d", index);
@@ -315,7 +301,10 @@ static void check_bounds(List* list, int index) {
         fprintf(stderr, "%d", list->len);
         exit(EXIT_FAILURE);
     }
+    
+    return (list->start + index) % list->data_size;
 }
+
 
 /*
     Get's a pointer to a list element (so changes to pointer object
@@ -369,15 +358,15 @@ void free_list(List* list) {
     in the list are just pointers to your objects)
 */
 List* slice(List* list, int start, int end) {
-    while(start < 0) {
-        start += list->len;
-    }
-    while(end < 0) {
-        end += list->len;
-    }
-    int new_len = end - start;
     int real_start = convert_index(list, start);
     int real_end = convert_index(list, end);
+    int new_len = 0;
+    if (real_start > real_end) {
+        new_len = list->data_size - real_start + real_end;
+    }
+    else {
+        new_len = real_end - real_start;
+    }
 
     List* new_list = new_list_s(new_len * 2);
 
