@@ -5,6 +5,7 @@
         "type_traits": "c",
         "list.h": "c",
         "map.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "stringstream.h": "c"
     }
 }

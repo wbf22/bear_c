@@ -2,6 +2,7 @@
 #include "List.h"
 #include "Map.h"
 #include "StringStream.h"
+#include "Set.h"
 
 /*
 
@@ -364,14 +365,58 @@ void stringstream_test() {
 
 }
 
+void set_test() {
+
+    typedef struct MyStruct {
+        int x;
+        int y;
+    } MyStruct;
+
+
+    Set* set = new_set();
+    
+    // add objects
+    MyStruct object = {1, 3};
+    any_add(set, &object, sizeof(object));
+
+    // check if has
+    int has = any_has(set, &object, sizeof(object));
+    assert(has, "has check");
+
+    // iterate over objects
+    void** items = set_items(set);
+    for (int i = 0; i < set->len; ++i) {
+        MyStruct* ptr = (MyStruct*) items[i];
+
+        printf("{%d,%d}\n", ptr->x, ptr->y);
+    }
+
+    // add more
+    int my_int = 10;
+    int_add(set, my_int);
+
+
+    // remove
+    any_erase_s(set, &object, sizeof(object));
+
+    // get length
+    int len = set->len;
+    printf("%d\n", len);
+    assert(len == 1, "check len");
+
+
+    // clean up
+    free_set(set);
+}
 
 int main() {
 
     // list_test_push_push_front_pop_pop_front_resize_get_set();
     // map_resizing_all_methods();
+    // stringstream_test();
+    // set_test();
 
-    stringstream_test();
-
+    
 
     return 0;
 }

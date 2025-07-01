@@ -1,6 +1,8 @@
 #ifndef MAP
 #define MAP
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 typedef struct Element {
@@ -403,7 +405,7 @@ static void resize_map(Map* map) {
     MyStruct key = {1, "hi"};
     MyStruct2 object = {1, 3};
 
-    any_unique(map, &key, sizeof(key), object);
+    any_unique(map, &key, sizeof(key), &object);
     ```
     Does not allow overwriting existing elements, as this would leave an
     unfreed pointer. 
@@ -456,7 +458,7 @@ void unique(Map* map, char* key, void* data) {
     MyStruct key = {1, "hi"};
     MyStruct2 object = {1, 3};
 
-    any_insert(map, &key, sizeof(key), object, sizeof(object));
+    any_insert(map, &key, sizeof(key), &object, sizeof(object));
     ```
 
 */
@@ -609,7 +611,7 @@ Element** map_items(Map* map) {
             
             int deleted = 0;
             if (map->data[i]->key_size == DELETED_KEY_SIZE) {
-                 if (strcmp(map->data[i]->key, DELETED_KEY) == 0) {
+                if (strcmp(map->data[i]->key, DELETED_KEY) == 0) {
                     deleted = 1;
                 }
             }
