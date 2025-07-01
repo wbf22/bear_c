@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include "List.h"
 #include "Map.h"
-#include "StringStream.h"
+#include "String.h"
 #include "Set.h"
+#include "CsvDb.h"
 
 /*
 
@@ -257,7 +258,7 @@ void map_resizing_all_methods() {
     MyStruct object3 = {2, 4};
     unique(map, "my_key2", &object3);
 
-    Element** items = map_items(map);
+    Element** items = map_elements(map);
     for (int i = 0; i < map->len; ++i) {
         Element* item = items[i];
         char* key = item->key;
@@ -340,19 +341,19 @@ void map_resizing_all_methods() {
 
 void stringstream_test() {
 
-    StringStream* ss = new_stream();
+    String* ss = new_string();
 
     append(ss, "hi ");
     append(ss, "bye! ");
     append_front(ss, "what ");
     append_front(ss, "That's ");
-    StringStream* sub = substr(ss, 4, 14);
+    String* sub = substr(ss, 4, 14);
     printf("%s\n", str(sub));
-    free_stream(sub);
+    free_string(sub);
     append(ss, "beautiful!");
     sub = substr(ss, 0, 14);
     printf("%s\n", str(sub));
-    free_stream(sub);
+    free_string(sub);
 
     char* res = str(ss);
     printf("%s\n", res);
@@ -361,7 +362,7 @@ void stringstream_test() {
     printf("%s\n", str(ss));
 
 
-    free_stream(ss);
+    free_string(ss);
 
 }
 
@@ -411,12 +412,10 @@ void set_test() {
 
 int main() {
 
-    // list_test_push_push_front_pop_pop_front_resize_get_set();
-    // map_resizing_all_methods();
-    // stringstream_test();
-    // set_test();
+    CsvDb* db = new_database();
+    load_csv(db, "test.csv", 1 * BYTES_IN_GIGABYTE, 0);
 
-    
+    free_database(db);
 
     return 0;
 }

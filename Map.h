@@ -55,7 +55,7 @@ typedef struct Element {
         unique(map, key, new_object);
     }
 
-    Element** items = map_items(map);
+    Element** items = map_elements(map);
     for (int i = 0; i < map->len; ++i) {
         Element* item = items[i];
         char* key = item->key;
@@ -70,7 +70,7 @@ typedef struct Element {
         MyStruct* obj = (MyStruct*) item->data;
         free(obj);
     }
-    free(items); // map_items allocates memory for the 'items' array
+    free(items); // map_elements allocates memory for the 'items' array
     free_map(map);
 
 
@@ -97,7 +97,7 @@ typedef struct Element {
     - erase() int_erase() any_erase() -> O(1) amoritized
     - free_map() -> O(n)
     - clear_map() -> O(n)
-    - map_items() -> O(n)
+    - map_elements() -> O(n)
     - contains() int_contains() any_contains() -> O(1) amoritized
 
 
@@ -481,6 +481,9 @@ void int_insert(Map* map, int key, void* data, size_t data_size) {
 
 /*
     Function to insert an object in the map using a string as the key.
+
+    The key is copied so the key passed in can be freed before the map
+    if needed. (the key copy is freed by the free_map() function)
 */
 void insert(Map* map, char* key, void* data, size_t data_size) {
     any_insert(map, key, (strlen(key) + 1) * sizeof(char), data, data_size);
@@ -601,7 +604,7 @@ void* erase(Map* map, char* key) {
     state. However, the array of elements must be cleaned up or
     there will be memory leaks. (so free the array, not the elements)
 */
-Element** map_items(Map* map) {
+Element** map_elements(Map* map) {
     Element** array = malloc(map->len * sizeof(Element));
 
     int l = 0;
