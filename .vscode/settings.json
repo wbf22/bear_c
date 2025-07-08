@@ -10,6 +10,7 @@
         "stdlib.h": "c",
         "set.h": "c",
         "csvdb.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "time.h": "c"
     }
 }

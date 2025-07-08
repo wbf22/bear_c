@@ -402,27 +402,10 @@ List* slice(List* list, int start, int end) {
 }
 
 
-
-
-void* g_data(void* ptr, size_t size) {
-    char *data = malloc(size);
-    if (data == NULL) {
-        fprintf(stderr, "Error allocating memory in! Exiting...");
-        exit(EXIT_FAILURE);
-    }
-
-    memcpy(data, ptr, size);
-
-    return data;
+void sort(List* list, int (* _Nonnull __compar)(const void *, const void *)) {
+    resize(list); // get list data all in a row
+    qsort(list->data, list->len, sizeof(void*),  __compar);
 }
-
-
-void p_data(void* dest, size_t size, void* data) {
-
-    memcpy(dest, data, size);
-    free(data);
-}
-
 
 
 

@@ -48,7 +48,7 @@ String* new_string_s(size_t size) {
 }
 
 String* new_string() {
-    return new_string_s(10);
+    return new_string_s(100);
 }
 
 
@@ -193,7 +193,7 @@ void append_front_c(String* stream, char c) {
     Returns a the string of the stream. This actually points to the
     buffer of the array. So modifying the returned string will alter
     the stream (risky). If you plan to modify the returned string use
-    str_c().
+    str_c() to get a copy.
 
     There is no need to clean up this string if you call free_string().
 
@@ -223,21 +223,26 @@ char* str(String* stream) {
 
     O(n) operation since the string is copied to 'dest'.
 */
-void str_c(String* stream, char* dest) {
-    char* str = stream;
-    strcpy(dest, str);
+char* str_c(String* stream) {
+    return strdup(str(stream));
 }
 
 
 
-static int convert_index_string(String* stream, int index) {
+static int convert_index_string(String* stream, int index, int include_last) {
 
 
     while (index < 0) {
         index += stream->len;
     }
 
-    int in_bounds = index < stream->len;
+    int in_bounds;
+    if (include_last) {
+        in_bounds = index <= stream->len;
+    }
+    else {
+        in_bounds = index < stream->len;
+    }
     if (!in_bounds) {
         fprintf(stderr, "Index ");
         fprintf(stderr, "%d", index);
@@ -253,7 +258,7 @@ static int convert_index_string(String* stream, int index) {
     Get's a char at an index. O(1)
 */
 char char_at(String* stream, int index) {
-    int real_index = convert_index_string(stream, index);
+    int real_index = convert_index_string(stream, index, 0);
     return stream->buffer[real_index];
 }
 
@@ -261,16 +266,17 @@ char char_at(String* stream, int index) {
     Sets a char at an index. O(1)
 */
 void set_char(String* stream, int index, char c) {
-    int real_index = convert_index_string(stream, index);
+    int real_index = convert_index_string(stream, index, 0);
     stream->buffer[real_index] = c;
 }
 
 /*
     Creates a sub string of the stream. O(n) operation.
+    (inclusive, exclusive)
 */
 String* substr(String* stream, int start, int end) {
-    int real_start = convert_index_string(stream, start);
-    int real_end = convert_index_string(stream, end);
+    int real_start = convert_index_string(stream, start, 0);
+    int real_end = convert_index_string(stream, end, 1);
     int new_len = 0;
     if (real_start > real_end) {
         new_len = stream->buffer_size - real_start + real_end;
@@ -316,7 +322,7 @@ String* substr(String* stream, int start, int end) {
     Free's the stream's meta data but doesn't free the stream's
     internal buffer, returning that instead for use. 
 
-    The resulting string does need to be freed after you are done
+    The resulting string NEEDS to be freed after you are done
     with it.
 */
 char* free_string_str(String* stream) {
@@ -445,7 +451,48 @@ int equals(String* ss, char* str) {
     return 1;
 }
 
+int contains_str(String* ss, char* str) {
 
+    int match = 0;
+    int other_i = 0;
+    for (int i = 0; i < ss->len; ++i) {
+        if (char_at(ss, i) != str[other_i]) {
+            other_i = 0;
+        }
+        else {
+            ++other_i;
+            if (other_i == strlen(str)) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+int starts_with(String* ss, char* str) {
+
+    for (int i = 0; i < strlen(str); ++i) {
+        if (char_at(ss, i) != str[i]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+int ends_with(String* ss, char* str) {
+
+    int other_i = 0;
+    for (int i = ss->len - strlen(str); i < ss->len; ++i) {
+        if (char_at(ss, i) != str[other_i]) {
+            return 0;
+        }
+        ++other_i;
+    }
+
+    return 1;
+}
 
 
 #endif

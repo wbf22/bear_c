@@ -413,9 +413,51 @@ void set_test() {
 int main() {
 
     CsvDb* db = new_database();
-    load_csv(db, "test.csv", 1 * BYTES_IN_GIGABYTE, 0);
+    load_csv(db, "test.csv");
 
+    List* row1 = new_list();
+    push(row1, "user_123");
+    push(row1, "bob@gmail.com");
+    push(row1, "-1");
+
+    List* row2 = new_list();
+    push(row2, "user_423");
+    push(row2, "bebo@gmail.com");
+    push(row2, "5723409234");
+
+    List* rows = new_list();
+    push(rows, row1);
+    push(rows, row2);
+
+    Map* table_name_to_rows = new_map();
+    char* table_name = "test";
+    insert(table_name_to_rows, table_name, rows, sizeof(rows));
+    
+    transaction(db, table_name_to_rows);
+
+    free_map(table_name_to_rows);
+    free_list(rows);
+    free_list(row1);
+    free_list(row2);
+    
     free_database(db);
+
+
+
+    // String* ss = new_string();
+    // append(ss, "hi");
+    // char* str1 = free_string_str(ss);
+    // ss = new_string();
+    // append(ss, "hi2");
+    // char* str2 = free_string_str(ss);
+
+    // void** array = malloc(4 * sizeof(void*));
+    // array[0] = str1;
+    // array[1] = str2;
+
+
+    // qsort(array, 2, sizeof(void*), compare_file_names);
+
 
     return 0;
 }

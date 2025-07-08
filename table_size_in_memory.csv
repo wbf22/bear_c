@@ -1,0 +1,10 @@
+128000000,1 million lines
+0.1192,GB of ram
+,
+1536000000,12 million lines
+1.4305,GB of ram
+,
+<meta> a0=128*1000000
+<meta> a1=a0/1073741824
+<meta> a3=128*12000000
+<meta> a4=a3/1073741824
