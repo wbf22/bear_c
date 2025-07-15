@@ -125,7 +125,7 @@ static size_t hash_s_3(int failures) {
     return (size_t)hash;
 }
 
-static size_t probe_s(Set* set, void* data, size_t data_size, int* hash_collisions) {
+static size_t probe_s(Set* set, char* data, size_t data_size, int* hash_collisions) {
     size_t index = hash_s(data, data_size) % set->data_size;
     size_t first_index = index;
 
@@ -276,7 +276,7 @@ void int_add(Set* set, int data) {
     Function to insert a string in the set.
 */
 void add(Set* set, char* data) {
-    any_add(set, &data, (strlen(data) + 1) * sizeof(char));
+    any_add(set, data, (strlen(data) + 1) * sizeof(char));
 }
 
 

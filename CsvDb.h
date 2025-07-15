@@ -466,7 +466,7 @@ void index_column(CsvDb* db, char* column_name) {}
     If you don't want to overwrite rows completely, then you might use the
     run() method below which let's you use postgres like syntax to do updates.
 */
-void transaction(CsvDb* db, Map* table_name_to_rows) {
+void transaction(CsvDb* db, Map* table_name_to_rows, Map* table_name_to_keys_to_delete) {
 
     /*
         write to transaction files
@@ -518,6 +518,24 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
         free_string(row_str);
     }
     free(tables);
+
+    Element** delete_tables = map_elements(table_name_to_keys_to_delete);
+    for (size_t i = 0; i < table_name_to_keys_to_delete->len; ++i) {
+        Element* ele = delete_tables[i];
+        char* table_name = ele->key;
+        char* key = (char*) ele->data;
+
+        append(transaction_str, "<TABLE> ");
+        append(transaction_str, table_name);
+        append(transaction_str, "\n");
+
+        append(transaction_str, "DELETE ");
+        append(transaction_str, key);
+        append(transaction_str, "\n");
+    }
+    free(delete_tables);
+
+    append_front(transaction_str, "END\n");
     if( write_to_file(str(ss), str(transaction_str)) ) {
         perror("Failed to write transaction to file");
         exit(EXIT_FAILURE);
@@ -584,6 +602,17 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
     }
     free(elements);
 
+    Element** delete_elements = map_elements(table_name_to_keys_to_delete);
+    for (size_t i = 0; i < table_name_to_keys_to_delete->len; ++i) {
+        Element* ele = delete_elements[i];
+        char* table_name = ele->key;
+        char* key = (char*) ele->data;
+
+        Table* table = at(db->table_name_to_table, table_name);
+        erase(table->keys_to_rows, key);
+    }
+    free(delete_elements);
+
 
     // TRIGGER TABLE WRITE IF NEEDED
     size_t time = current_time_ms();
@@ -614,6 +643,7 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
 
 
         Map* transaction_tables_to_rows = new_map();
+        Map* transaction_tables_to_delete_keys = new_map();
         for (int i = 0; i < transaction_files->len; ++i) {
 
             char* file = get(transaction_files, i);
@@ -622,11 +652,17 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
             size_t num_lines;
             String** lines = read_lines(file, &num_lines);
             Map* keys_to_rows;
+            Set* delete_keys = new_set();
             char* table_name = NULL;
             for (int i = 0; i < num_lines; ++i) {
                 String* line = lines[i];
                 if (line->len > 0) {
-                    if (starts_with(line, "<TABLE>")) {
+                    if(i == 0) {
+                        if (!starts_with(line, "END")) {
+                            break; // if the transaction was incomplete skip it
+                        }
+                    }
+                    else if (starts_with(line, "<TABLE>")) {
                         String* table_name_ss = substr(line, 8, line->len);
                         if (table_name != NULL) free(table_name);
                         table_name = free_string_str(table_name_ss);
@@ -638,6 +674,24 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
                             keys_to_rows = new_map();
                             insert(transaction_tables_to_rows, table_name, keys_to_rows, sizeof(Map));
                         }
+
+                        if (contains(transaction_tables_to_delete_keys, table_name)) {
+                            delete_keys = at(transaction_tables_to_delete_keys, table_name);
+                        }
+                        else {
+                            delete_keys = new_set();
+                            insert(transaction_tables_to_delete_keys, table_name, delete_keys, sizeof(List));
+                        }
+                    }
+                    else if (starts_with(line, "DELETE")) {
+                        int num_splits;
+                        String** splits = split(line, " ", &num_splits);
+                        String* key_s = splits[1];
+                        char* key = str_c(key_s); 
+
+                        add(delete_keys, key);
+                        erase(keys_to_rows, key);
+                        free_strings(splits, num_splits);
                     }
                     else {
                         Row* row = parse_row(line);
@@ -649,8 +703,6 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
             free(table_name);
             free(lines);
         }
-
-
 
 
         // step through lines in real csvs writing to copy csvs and apply changes
@@ -684,6 +736,7 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
 
                 String* line = read_line(file);
                 Map* transaction_keys_to_rows = at(transaction_tables_to_rows, table_name);
+                Set* keys_in_to_delete = at(transaction_tables_to_delete_keys, table_name);
                 while(line != NULL) {
 
                     Row* row = parse_row(line);
@@ -694,11 +747,15 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
                         free_string(row_str);
                         erase(transaction_keys_to_rows, trans_row->key);
                         free_row(trans_row);
+                        fprintf(tmp_file, "\n");
+                    }
+                    else if (has(keys_in_to_delete, row->key)) {
+                        // nothing (don't write)
                     }
                     else {
                         fprintf(tmp_file, str(line));
+                        fprintf(tmp_file, "\n");
                     }
-                    fprintf(tmp_file, "\n");
                     fflush(tmp_file);
 
                     free_string(line);
@@ -776,7 +833,24 @@ void transaction(CsvDb* db, Map* table_name_to_rows) {
             free_map(key_to_rows);
         }
         free(transaction_tables);
+
+        Element** delete_tables = map_elements(transaction_tables_to_delete_keys);
+        for(int i = 0; i < transaction_tables_to_delete_keys->len; ++i) {
+            Element* transaction_table = delete_tables[i];
+            Set* delete_keys = (Set*) transaction_table->data;
+
+            char** items = set_items(delete_keys);
+            for (int s = 0; s < delete_keys->len; ++s) {
+                char* key = (char*) items[s];
+                free(key);
+            }
+            free_set(delete_keys);
+        }
+        free(delete_tables);
+
+        
         free_map(transaction_tables_to_rows);
+        free_map(transaction_tables_to_delete_keys);
     }
 
 

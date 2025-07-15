@@ -217,11 +217,9 @@ char* str(String* stream) {
 
 
 /*
-    Converts the stream to a string and populates the provided char array
-    with that string. 'dest' must be larger enough to contain the resulting
-    string.
+    Converts the stream to a string makes a copy. 
 
-    O(n) operation since the string is copied to 'dest'.
+    O(n) operation since the string is copied.
 */
 char* str_c(String* stream) {
     return strdup(str(stream));
@@ -325,17 +323,25 @@ String* substr(String* stream, int start, int end) {
     The resulting string NEEDS to be freed after you are done
     with it.
 */
-char* free_string_str(String* stream) {
-    char* str_res = str(stream);
-    free(stream);
+char* free_string_str(String* ss) {
+    char* str_res = str(ss);
+    free(ss);
     return str_res;
 }
 
-void free_string(String* stream) {
+void free_string(String* ss) {
     // Free data
-    free(stream->buffer);
+    free(ss->buffer);
     // Free the struct itself
-    free(stream);
+    free(ss);
+}
+
+void free_strings(String** strings, size_t num_strings) {
+
+    for (int s = 0; s < num_strings; ++s) {
+        free_string(strings[s]);
+    }
+    free(strings);
 }
 
 String* replace(String* ss, char* str, char* replacement) {

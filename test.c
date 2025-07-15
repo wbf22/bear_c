@@ -432,10 +432,14 @@ int main() {
     Map* table_name_to_rows = new_map();
     char* table_name = "test";
     insert(table_name_to_rows, table_name, rows, sizeof(rows));
+
+    Map* table_name_to_keys_to_delete = new_map();
+    insert(table_name_to_keys_to_delete, table_name, "user_423", sizeof(char*));
     
-    transaction(db, table_name_to_rows);
+    transaction(db, table_name_to_rows, table_name_to_keys_to_delete);
 
     free_map(table_name_to_rows);
+    free_map(table_name_to_keys_to_delete);
     free_list(rows);
     free_list(row1);
     free_list(row2);

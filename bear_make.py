@@ -23,6 +23,7 @@ python3 bear_make.py my_make_file
 import argparse
 import hashlib
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -240,7 +241,9 @@ else:
                         raise Exception(result.stderr)
                     if result.stderr != '':
                         print(yellow(result.stderr))
-                    root, ext = os.path.splitext(file)
+
+                    filename = Path(file).name
+                    root, ext = os.path.splitext(filename)
                     object_file = root + '.o'
                     
                     os.makedirs(os.path.dirname(new_path), exist_ok=True)
