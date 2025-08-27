@@ -23,7 +23,6 @@ python3 bear_make.py my_make_file
 import argparse
 import hashlib
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import time
@@ -93,9 +92,8 @@ def get_files_recursively(directory: str) -> list[str]:
         if os.path.isfile(full_path):
             files.append(full_path)
         elif os.path.isdir(full_path):
-            files.append(
-                get_files_recursively(full_path)
-            )
+            rec_files = get_files_recursively(full_path)
+            files.extend(rec_files)
 
     return files
 
@@ -241,9 +239,8 @@ else:
                         raise Exception(result.stderr)
                     if result.stderr != '':
                         print(yellow(result.stderr))
-
-                    filename = Path(file).name
-                    root, ext = os.path.splitext(filename)
+                    file_name = os.path.basename(file)
+                    root, ext = os.path.splitext(file_name)
                     object_file = root + '.o'
                     
                     os.makedirs(os.path.dirname(new_path), exist_ok=True)
