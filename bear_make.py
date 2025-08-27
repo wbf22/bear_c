@@ -124,6 +124,7 @@ else:
         files = []
         headers = []
         object_files = []
+        flags = ''
 
 
         directories = []
@@ -147,6 +148,10 @@ else:
                             file_path = line.split('=')[1]
                             file_path = extract_from_quotes(file_path)
                             files.append(file_path)
+                        elif line.startswith('FLAGS'):
+                            flags = line.split('=')[1]
+                            flags = extract_from_quotes(flags)
+
                                 
 
         except Exception as e:
@@ -265,6 +270,9 @@ else:
                     file.write(file_path + "=" + hash)
                     file.write('\n')
             
+
+        # add user extra args
+        command.append(flags)
 
 
         # call gcc
