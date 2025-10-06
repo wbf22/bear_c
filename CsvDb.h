@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <pthread.h>
 
 
 
@@ -52,6 +53,8 @@ typedef struct CsvDb {
     
     Map* table_name_to_table;
     size_t last_write_ms;
+
+    Map* transaction_file_locks;
 
 } CsvDb;
 
@@ -315,14 +318,24 @@ void free_database(CsvDb* db) {
         free(table);
     }
     free(tables);
-
     free_map(db->table_name_to_table);
+
+
+    Element** locks = map_elements(db->transaction_file_locks);
+    for(int l = 0; l < db->transaction_file_locks->len; ++l) {
+        free(locks[l]);
+    }
+    free(locks);
+    free_map(db->transaction_file_locks);
+
+
     free(db);
 }
 
 CsvDb* new_database() {
     CsvDb* db = malloc(sizeof(CsvDb));
     db->table_name_to_table = new_map();
+    db->transaction_file_locks = new_map();
 
     return db;
 }
@@ -431,6 +444,245 @@ void load_csv(CsvDb* db, char* path) {
     more memory then is alloted to the table with it's memory_threshold.
 */
 void index_column(CsvDb* db, char* column_name) {}
+
+/**
+ * Method for writing the in memory tables to the actual csv
+ */
+void table_write(CsvDb* db) {
+
+    // read transaction files
+    List* transaction_files = new_list();
+    DIR *dir = opendir(TMP_DIRECTORY);
+    if (dir == NULL) {
+        perror("Failed to open tmp directory");
+        exit(EXIT_FAILURE);
+    }
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        char* file = entry->d_name;
+        if (strcmp(file, ".") == 0 || strcmp(file, "..") == 0)
+            continue;
+        String* transaction_file_path = new_string();
+        append(transaction_file_path, TMP_DIRECTORY);
+        append(transaction_file_path, "/");
+        append(transaction_file_path, file);
+        char* trans_file_path_str = free_string_str(transaction_file_path);
+        push(transaction_files, trans_file_path_str);
+    }
+    closedir(dir);
+    sort(transaction_files, compare_file_names);
+
+
+    Map* transaction_tables_to_rows = new_map();
+    Map* transaction_tables_to_delete_keys = new_map();
+    for (int i = 0; i < transaction_files->len; ++i) {
+
+        char* file = get(transaction_files, i);
+
+        // collect rows from transaction files
+        size_t num_lines;
+        String** lines = read_lines(file, &num_lines);
+        Map* keys_to_rows;
+        Set* delete_keys = new_set();
+        char* table_name = NULL;
+        for (int i = 0; i < num_lines; ++i) {
+            String* line = lines[i];
+            if (line->len > 0) {
+                if(i == 0) {
+                    if (!starts_with(line, "END")) {
+                        break; // if the transaction was incomplete skip it
+                    }
+                }
+                else if (starts_with(line, "<TABLE>")) {
+                    String* table_name_ss = substr(line, 8, line->len);
+                    if (table_name != NULL) free(table_name);
+                    table_name = free_string_str(table_name_ss);
+
+                    if (contains(transaction_tables_to_rows, table_name)) {
+                        keys_to_rows = at(transaction_tables_to_rows, table_name);
+                    }
+                    else {
+                        keys_to_rows = new_map();
+                        insert(transaction_tables_to_rows, table_name, keys_to_rows, sizeof(Map));
+                    }
+
+                    if (contains(transaction_tables_to_delete_keys, table_name)) {
+                        delete_keys = at(transaction_tables_to_delete_keys, table_name);
+                    }
+                    else {
+                        delete_keys = new_set();
+                        insert(transaction_tables_to_delete_keys, table_name, delete_keys, sizeof(List));
+                    }
+                }
+                else if (starts_with(line, "DELETE")) {
+                    int num_splits;
+                    String** splits = split(line, " ", &num_splits);
+                    String* key_s = splits[1];
+                    char* key = str_c(key_s); 
+
+                    add(delete_keys, key);
+                    erase(keys_to_rows, key);
+                    free_strings(splits, num_splits);
+                }
+                else {
+                    Row* row = parse_row(line);
+                    insert(keys_to_rows, row->key, row, sizeof(row));
+                }
+            }
+            free_string(line);
+        }
+        free(table_name);
+        free(lines);
+    }
+
+
+    // step through lines in real csvs writing to copy csvs and apply changes
+    Map* table_name_to_temp_tables = new_map();
+    Element** tables_in_db = map_elements(db->table_name_to_table);
+    for(int i = 0; i < db->table_name_to_table->len; ++i) {
+        Element* table_ele = tables_in_db[i];
+        char* table_name = table_ele->key;
+        Table* table = (Table*) table_ele->data;
+
+        if (contains(transaction_tables_to_rows, table_name)) {
+            FILE *file = fopen(table->csv_path, "r");
+            if (file == NULL) {
+                perror("Failed to open file");
+                exit(EXIT_FAILURE);
+            }
+
+            String* new_table_path = new_string();
+            append(new_table_path, TMP_DIRECTORY);
+            append(new_table_path, "/");
+            append(new_table_path, table_name);
+            append(new_table_path, ".csv");
+            insert(table_name_to_temp_tables, table_name, str_c(new_table_path), sizeof(char*));
+
+            FILE* tmp_file = fopen(str(new_table_path), "a");
+            if (tmp_file == NULL) {
+                fclose(file);
+                perror("Failed to make temp file writing to db");
+                exit(EXIT_FAILURE);
+            }
+
+            String* line = read_line(file);
+            Map* transaction_keys_to_rows = at(transaction_tables_to_rows, table_name);
+            Set* keys_in_to_delete = at(transaction_tables_to_delete_keys, table_name);
+            while(line != NULL) {
+
+                Row* row = parse_row(line);
+                if (contains(transaction_keys_to_rows, row->key)) {
+                    Row* trans_row = at(transaction_keys_to_rows, row->key);
+                    String* row_str = row_to_str(trans_row);
+                    fprintf(tmp_file, str(row_str));
+                    free_string(row_str);
+                    erase(transaction_keys_to_rows, trans_row->key);
+                    free_row(trans_row);
+                    fprintf(tmp_file, "\n");
+                }
+                else if (has(keys_in_to_delete, row->key)) {
+                    // nothing (don't write)
+                }
+                else {
+                    fprintf(tmp_file, str(line));
+                    fprintf(tmp_file, "\n");
+                }
+                fflush(tmp_file);
+
+                free_string(line);
+                free_row(row);
+
+                line = read_line(file);
+            }
+            
+            Element** left_over = map_elements(transaction_keys_to_rows);
+            for(int e = 0; e < transaction_keys_to_rows->len; ++e) {
+                Element* ele = left_over[e];
+                Row* trans_row = (Row*) ele->data;
+                String* row_str = row_to_str(trans_row);
+                fprintf(tmp_file, str(row_str));
+                fprintf(tmp_file, "\n");
+            }
+            free(left_over);
+
+            fclose(tmp_file);
+            fclose(file);
+
+            free_string(new_table_path);
+        }
+        
+    }
+    free(tables_in_db);
+
+
+    // replace csv's with temp csv's
+    Element** table_name_tmps = map_elements(table_name_to_temp_tables);
+    for (int t = 0; t < table_name_to_temp_tables->len; ++t) {
+
+        Element* ele = table_name_tmps[t];
+        char* table_name = ele->key;
+        char* tmp_path = (char*) ele->data;
+
+        Table* table = at(db->table_name_to_table, table_name);
+        
+        if (rename(tmp_path, table->csv_path) != 0) {
+            perror("Error csv file with tmp file");
+            exit(EXIT_FAILURE);
+        }
+
+        free(tmp_path);
+    }
+    free(table_name_tmps);
+    free_map(table_name_to_temp_tables);
+
+
+    // delete transaction files
+    while (transaction_files->len > 0) {
+        char* transaction_file = pop(transaction_files);
+        if (remove(transaction_file) != 0) {
+            perror("Error deleting transaction file");
+            exit(EXIT_FAILURE);
+        }
+        free(transaction_file);
+    }
+    free_list(transaction_files);
+
+
+    // clean up transaction varaibles
+    Element** transaction_tables = map_elements(transaction_tables_to_rows);
+    for(int i = 0; i < transaction_tables_to_rows->len; ++i) {
+        Element* transaction_table = transaction_tables[i];
+        Map* key_to_rows = (Map*) transaction_table->data;
+
+        Element** key_to_rows_elements = map_elements(key_to_rows);
+        for(int j = 0; j < key_to_rows->len; ++j) {
+            Element* ele = key_to_rows_elements[j];
+            Row* row = (Row*) ele->data;
+            free_row(row);
+        }
+        free(key_to_rows_elements);
+        free_map(key_to_rows);
+    }
+    free(transaction_tables);
+
+    Element** delete_tables = map_elements(transaction_tables_to_delete_keys);
+    for(int i = 0; i < transaction_tables_to_delete_keys->len; ++i) {
+        Element* transaction_table = delete_tables[i];
+        Set* delete_keys = (Set*) transaction_table->data;
+
+        char** items = set_items(delete_keys);
+        for (int s = 0; s < delete_keys->len; ++s) {
+            char* key = (char*) items[s];
+            free(key);
+        }
+        free_set(delete_keys);
+    }
+    free(delete_tables);
+
+    
+    free_map(transaction_tables_to_rows);
+    free_map(transaction_tables_to_delete_keys);
+}
 
 /*
     Runs all changes in a transaction.
@@ -618,239 +870,7 @@ void transaction(CsvDb* db, Map* table_name_to_rows, Map* table_name_to_keys_to_
     size_t time = current_time_ms();
     if (time - db->last_write_ms > WRITE_FREQUENCY_MS) {
         db->last_write_ms = time;
-
-        // read transaction files
-        List* transaction_files = new_list();
-        DIR *dir = opendir(TMP_DIRECTORY);
-        if (dir == NULL) {
-            perror("Failed to open tmp directory");
-            exit(EXIT_FAILURE);
-        }
-        struct dirent *entry;
-        while ((entry = readdir(dir)) != NULL) {
-            char* file = entry->d_name;
-            if (strcmp(file, ".") == 0 || strcmp(file, "..") == 0)
-                continue;
-            String* transaction_file_path = new_string();
-            append(transaction_file_path, TMP_DIRECTORY);
-            append(transaction_file_path, "/");
-            append(transaction_file_path, file);
-            char* trans_file_path_str = free_string_str(transaction_file_path);
-            push(transaction_files, trans_file_path_str);
-        }
-        closedir(dir);
-        sort(transaction_files, compare_file_names);
-
-
-        Map* transaction_tables_to_rows = new_map();
-        Map* transaction_tables_to_delete_keys = new_map();
-        for (int i = 0; i < transaction_files->len; ++i) {
-
-            char* file = get(transaction_files, i);
-
-            // collect rows from transaction files
-            size_t num_lines;
-            String** lines = read_lines(file, &num_lines);
-            Map* keys_to_rows;
-            Set* delete_keys = new_set();
-            char* table_name = NULL;
-            for (int i = 0; i < num_lines; ++i) {
-                String* line = lines[i];
-                if (line->len > 0) {
-                    if(i == 0) {
-                        if (!starts_with(line, "END")) {
-                            break; // if the transaction was incomplete skip it
-                        }
-                    }
-                    else if (starts_with(line, "<TABLE>")) {
-                        String* table_name_ss = substr(line, 8, line->len);
-                        if (table_name != NULL) free(table_name);
-                        table_name = free_string_str(table_name_ss);
-
-                        if (contains(transaction_tables_to_rows, table_name)) {
-                            keys_to_rows = at(transaction_tables_to_rows, table_name);
-                        }
-                        else {
-                            keys_to_rows = new_map();
-                            insert(transaction_tables_to_rows, table_name, keys_to_rows, sizeof(Map));
-                        }
-
-                        if (contains(transaction_tables_to_delete_keys, table_name)) {
-                            delete_keys = at(transaction_tables_to_delete_keys, table_name);
-                        }
-                        else {
-                            delete_keys = new_set();
-                            insert(transaction_tables_to_delete_keys, table_name, delete_keys, sizeof(List));
-                        }
-                    }
-                    else if (starts_with(line, "DELETE")) {
-                        int num_splits;
-                        String** splits = split(line, " ", &num_splits);
-                        String* key_s = splits[1];
-                        char* key = str_c(key_s); 
-
-                        add(delete_keys, key);
-                        erase(keys_to_rows, key);
-                        free_strings(splits, num_splits);
-                    }
-                    else {
-                        Row* row = parse_row(line);
-                        insert(keys_to_rows, row->key, row, sizeof(row));
-                    }
-                }
-                free_string(line);
-            }
-            free(table_name);
-            free(lines);
-        }
-
-
-        // step through lines in real csvs writing to copy csvs and apply changes
-        Map* table_name_to_temp_tables = new_map();
-        Element** tables_in_db = map_elements(db->table_name_to_table);
-        for(int i = 0; i < db->table_name_to_table->len; ++i) {
-            Element* table_ele = tables_in_db[i];
-            char* table_name = table_ele->key;
-            Table* table = (Table*) table_ele->data;
-
-            if (contains(transaction_tables_to_rows, table_name)) {
-                FILE *file = fopen(table->csv_path, "r");
-                if (file == NULL) {
-                    perror("Failed to open file");
-                    exit(EXIT_FAILURE);
-                }
-
-                String* new_table_path = new_string();
-                append(new_table_path, TMP_DIRECTORY);
-                append(new_table_path, "/");
-                append(new_table_path, table_name);
-                append(new_table_path, ".csv");
-                insert(table_name_to_temp_tables, table_name, str_c(new_table_path), sizeof(char*));
-
-                FILE* tmp_file = fopen(str(new_table_path), "a");
-                if (tmp_file == NULL) {
-                    fclose(file);
-                    perror("Failed to make temp file writing to db");
-                    exit(EXIT_FAILURE);
-                }
-
-                String* line = read_line(file);
-                Map* transaction_keys_to_rows = at(transaction_tables_to_rows, table_name);
-                Set* keys_in_to_delete = at(transaction_tables_to_delete_keys, table_name);
-                while(line != NULL) {
-
-                    Row* row = parse_row(line);
-                    if (contains(transaction_keys_to_rows, row->key)) {
-                        Row* trans_row = at(transaction_keys_to_rows, row->key);
-                        String* row_str = row_to_str(trans_row);
-                        fprintf(tmp_file, str(row_str));
-                        free_string(row_str);
-                        erase(transaction_keys_to_rows, trans_row->key);
-                        free_row(trans_row);
-                        fprintf(tmp_file, "\n");
-                    }
-                    else if (has(keys_in_to_delete, row->key)) {
-                        // nothing (don't write)
-                    }
-                    else {
-                        fprintf(tmp_file, str(line));
-                        fprintf(tmp_file, "\n");
-                    }
-                    fflush(tmp_file);
-
-                    free_string(line);
-                    free_row(row);
-
-                    line = read_line(file);
-                }
-                
-                Element** left_over = map_elements(transaction_keys_to_rows);
-                for(int e = 0; e < transaction_keys_to_rows->len; ++e) {
-                    Element* ele = left_over[e];
-                    Row* trans_row = (Row*) ele->data;
-                    String* row_str = row_to_str(trans_row);
-                    fprintf(tmp_file, str(row_str));
-                    fprintf(tmp_file, "\n");
-                }
-                free(left_over);
-
-                fclose(tmp_file);
-                fclose(file);
-
-                free_string(new_table_path);
-            }
-            
-        }
-        free(tables_in_db);
-
-
-        // replace csv's with temp csv's
-        Element** table_name_tmps = map_elements(table_name_to_temp_tables);
-        for (int t = 0; t < table_name_to_temp_tables->len; ++t) {
-
-            Element* ele = table_name_tmps[t];
-            char* table_name = ele->key;
-            char* tmp_path = (char*) ele->data;
-
-            Table* table = at(db->table_name_to_table, table_name);
-            
-            if (rename(tmp_path, table->csv_path) != 0) {
-                perror("Error csv file with tmp file");
-                exit(EXIT_FAILURE);
-            }
-
-            free(tmp_path);
-        }
-        free(table_name_tmps);
-        free_map(table_name_to_temp_tables);
-
-
-        // delete transaction files
-        while (transaction_files->len > 0) {
-            char* transaction_file = pop(transaction_files);
-            if (remove(transaction_file) != 0) {
-                perror("Error deleting transaction file");
-                exit(EXIT_FAILURE);
-            }
-            free(transaction_file);
-        }
-        free_list(transaction_files);
-
-
-        // clean up transaction varaibles
-        Element** transaction_tables = map_elements(transaction_tables_to_rows);
-        for(int i = 0; i < transaction_tables_to_rows->len; ++i) {
-            Element* transaction_table = transaction_tables[i];
-            Map* key_to_rows = (Map*) transaction_table->data;
-
-            Element** key_to_rows_elements = map_elements(key_to_rows);
-            for(int j = 0; j < key_to_rows->len; ++j) {
-                Element* ele = key_to_rows_elements[j];
-                Row* row = (Row*) ele->data;
-                free_row(row);
-            }
-            free(key_to_rows_elements);
-            free_map(key_to_rows);
-        }
-        free(transaction_tables);
-
-        Element** delete_tables = map_elements(transaction_tables_to_delete_keys);
-        for(int i = 0; i < transaction_tables_to_delete_keys->len; ++i) {
-            Element* transaction_table = delete_tables[i];
-            Set* delete_keys = (Set*) transaction_table->data;
-
-            char** items = set_items(delete_keys);
-            for (int s = 0; s < delete_keys->len; ++s) {
-                char* key = (char*) items[s];
-                free(key);
-            }
-            free_set(delete_keys);
-        }
-        free(delete_tables);
-
-        
-        free_map(transaction_tables_to_rows);
-        free_map(transaction_tables_to_delete_keys);
+        table_write(db);
     }
 
 
