@@ -9,15 +9,15 @@
 /*
     A list of elements of any type with the following operation complexities
     - len(...) -> O(1)
-    - push(...) -> O(1) amoritized
-    - push_front(...) -> O(1) amoritized
-    - pop(...) -> O(1)
-    - pop_front(...) -> O(1)
-    - get(...) -> O(1)
-    - set(...) -> O(1)
-    - clear() -> O(n)
+    - l_push(...) -> O(1) amoritized
+    - l_push_front(...) -> O(1) amoritized
+    - l_pop(...) -> O(1)
+    - l_pop_front(...) -> O(1)
+    - l_get(...) -> O(1)
+    - l_set(...) -> O(1)
+    - l_clear() -> O(n)
     - free_list() -> O(n)
-    - slice() -> O(n)
+    - l_slice() -> O(n)
 
 
     This list implementation stores pointers to objects inserted by the user. These
@@ -28,13 +28,13 @@
 
     To update an index in the list do something like this:
     ```
-    *(int*) get(list, 0) = 14;
+    *(int*) l_get(list, 0) = 14;
     ```
 
     or this
     ```
     int data = 12;
-    set(list, 0, &data, sizeof(int));
+    l_set(list, 0, &data, sizeof(int));
     ```
 
 
@@ -46,10 +46,10 @@
 
     List* list = new_list();
     for (int i = 0; i < 10; i++) {
-        push(list, &i);
+        l_push(list, &i);
     }
     for(int i = 0; i < list->len; ++i) {
-        int ele = *(int*) get(list, i);
+        int ele = *(int*) l_get(list, i);
         printf("%d, ", ele);
     }
     free_list(list);
@@ -67,10 +67,10 @@
     for (int i = 0; i < 10; i++) {
         int* d = malloc(sizeof(int));
         *d = i;
-        push(list, &d);
+        l_push(list, &d);
     }
     for(int i = 0; i < list->len; ++i) {
-        int* ele = (int*) get(list, i);
+        int* ele = (int*) l_get(list, i);
         printf("%d, ", *ele);
         free(ele);
     }
@@ -190,7 +190,7 @@ int resize(List* list) {
 
 
 /*
-    Function to add to the end of a list.
+    Function to s_add to the end of a list.
     May resize interanl size of the list,
     but amoritized is a constant operation.
 
@@ -199,7 +199,7 @@ int resize(List* list) {
     in the list. If this data is freed or goes out
     of scope, the list will be in a bad state.
 */
-void push(List* list, void* data) {
+void l_push(List* list, void* data) {
     
     if (list->len == list->data_size - 1) {
         resize(list);
@@ -211,7 +211,7 @@ void push(List* list, void* data) {
 }
 
 /*
-    Function to add to the end of a list.
+    Function to s_add to the end of a list.
     May resize interanl size of the list,
     but amoritized is a constant operation.
 
@@ -220,7 +220,7 @@ void push(List* list, void* data) {
     in the list. If this data is freed or goes out
     of scope, the list will be in a bad state.
 */
-void push_front(List* list, void* data) {
+void l_push_front(List* list, void* data) {
 
     if (list->len == list->data_size - 1) {
         resize(list);
@@ -239,11 +239,11 @@ void push_front(List* list, void* data) {
     ```
     List* list = new_list();
     int i = 10;
-    push(list, &i);
-    int ele = *(int*) pop(list);
+    l_push(list, &i);
+    int ele = *(int*) l_pop(list);
     ```
 */
-void* pop(List* list) {
+void* l_pop(List* list) {
 
     if (list->len == 0) {
         return NULL;
@@ -266,11 +266,11 @@ void* pop(List* list) {
     ```
     List* list = new_list();
     int i = 10;
-    push(list, &i);
-    int ele = *(int*) pop(list);
+    l_push(list, &i);
+    int ele = *(int*) l_pop(list);
     ```
 */
-void* pop_front(List* list) {
+void* l_pop_front(List* list) {
 
     if (list->len == 0) {
         return NULL;
@@ -310,7 +310,7 @@ static int convert_index(List* list, int index) {
     Get's a pointer to a list element (so changes to pointer object
     will change element on the list)
 */
-void* get(List* list, int index) {
+void* l_get(List* list, int index) {
     int real_index = convert_index(list, index);
     return list->data[real_index];
 }
@@ -320,7 +320,7 @@ void* get(List* list, int index) {
     is allocated, and the original pointer inserted at the index is 
     updated. 
 */
-void set(List* list, int index, void* data, size_t data_size) {
+void l_set(List* list, int index, void* data, size_t data_size) {
     int real_index = convert_index(list, index);
     memcpy(list->data[real_index], data, data_size);
 }
@@ -331,7 +331,7 @@ void set(List* list, int index, void* data, size_t data_size) {
     Clears the list, and frees all object copies on the heap
     created with pushes and sets
 */
-void clear(List* list) {
+void l_clear(List* list) {
     // Free each pointer inside data
     for (size_t i = 0; i < list->data_size; i++) {
         list->data[i] = NULL;
@@ -357,7 +357,7 @@ void free_list(List* list) {
     The resulting list will share objects with this list. (All objects
     in the list are just pointers to your objects)
 */
-List* slice(List* list, int start, int end) {
+List* l_slice(List* list, int start, int end) {
     int real_start = convert_index(list, start);
     int real_end = convert_index(list, end);
     int new_len = 0;
@@ -402,7 +402,7 @@ List* slice(List* list, int start, int end) {
 }
 
 
-void sort(List* list, int (* _Nonnull __compar)(const void *, const void *)) {
+void l_sort(List* list, int (* _Nonnull __compar)(const void *, const void *)) {
     resize(list); // get list data all in a row
     qsort(list->data, list->len, sizeof(void*),  __compar);
 }

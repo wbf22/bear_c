@@ -170,7 +170,7 @@ void free_set(Set* set) {
 }
 
 
-static void add_no_resize(Set* set, void* data, size_t data_size) {
+static void s_add_no_resize(Set* set, void* data, size_t data_size) {
     int hash_collisions = 0;
     size_t index = probe_s(set, data, data_size, &hash_collisions);
 
@@ -228,7 +228,7 @@ static void resize_set(Set* set) {
             // an element insert into set
             if (!deleted) {
                 Item* item = set->data[i];
-                add_no_resize(new_set, item->data, item->data_size);
+                s_add_no_resize(new_set, item->data, item->data_size);
             }
         }
     }
@@ -251,13 +251,13 @@ static void resize_set(Set* set) {
     Set* set = new_set();
     MyStruct object = {1, "hi"};
 
-    any_add(set, &object, sizeof(object));
+    s_any_add(set, &object, sizeof(object));
     ```
 
 */
-void any_add(Set* set, void* data, size_t data_size) {
+void s_any_add(Set* set, void* data, size_t data_size) {
 
-    add_no_resize(set, data, data_size);
+    s_add_no_resize(set, data, data_size);
 
     // resize if neeeded
     if (set->data_size * 0.7 < set->len) {
@@ -268,15 +268,15 @@ void any_add(Set* set, void* data, size_t data_size) {
 /*
     Function to insert an int in the set.
 */
-void int_add(Set* set, int data) {
-    any_add(set, &data, sizeof(int));
+void s_int_add(Set* set, int data) {
+    s_any_add(set, &data, sizeof(int));
 }
 
 /*
     Function to insert a string in the set.
 */
-void add(Set* set, char* data) {
-    any_add(set, data, (strlen(data) + 1) * sizeof(char));
+void s_add(Set* set, char* data) {
+    s_any_add(set, data, (strlen(data) + 1) * sizeof(char));
 }
 
 
@@ -293,7 +293,7 @@ void add(Set* set, char* data) {
 
     If the key doesn't exist nothing happens
 */
-void* any_erase_s(Set* set, void* data, size_t data_size) {
+void* s_any_erase(Set* set, void* data, size_t data_size) {
     int hash_collisions = 0;
     size_t index = probe_s(set, data, data_size, &hash_collisions);
 
@@ -331,8 +331,8 @@ void* any_erase_s(Set* set, void* data, size_t data_size) {
 
     If the key doesn't exist nothing happens
 */
-void* int_erase_s(Set* set, int key) {
-    return any_erase_s(set, &key, sizeof(key));
+void* s_int_erase(Set* set, int key) {
+    return s_any_erase(set, &key, sizeof(key));
 }
 
 /*
@@ -340,8 +340,8 @@ void* int_erase_s(Set* set, int key) {
 
     If the key doesn't exist nothing happens
 */
-void* erase_s(Set* set, char* key) {
-    return any_erase_s(set, key, (strlen(key) + 1) * sizeof(char));
+void* s_erase(Set* set, char* key) {
+    return s_any_erase(set, key, (strlen(key) + 1) * sizeof(char));
 }
 
 
@@ -398,7 +398,7 @@ void clear_set(Set* set) {
     }
     ```
 */
-int any_has(Set* set, void* data, size_t data_size) {
+int s_any_contains(Set* set, void* data, size_t data_size) {
 
     int hash_collisions = 0;
     size_t index = probe_s(set, data, data_size, &hash_collisions);
@@ -412,15 +412,15 @@ int any_has(Set* set, void* data, size_t data_size) {
 /*
     Function to determine if an int is in the set.
 */
-int int_has(Set* set, int data) {
-    return any_has(set, &data, sizeof(data));
+int s_int_contains(Set* set, int data) {
+    return s_any_contains(set, &data, sizeof(data));
 }
 
 /*
     Function to determine if a string is in the set.
 */
-int has(Set* set, char* data) {
-    return any_has(set, data, (strlen(data) + 1) * sizeof(char));
+int s_contains(Set* set, char* data) {
+    return s_any_contains(set, data, (strlen(data) + 1) * sizeof(char));
 }
 
 #endif

@@ -158,7 +158,7 @@ int write_lines(char* path, List* lines_or_char_stars) {
 
     // write lines
     for (int i = 0; i < lines_or_char_stars->len; ++i) {
-        char* line = (char*) get(lines_or_char_stars, i);
+        char* line = (char*) l_get(lines_or_char_stars, i);
         fprintf(file, line);
         fprintf(file, "\n");
     }
@@ -199,9 +199,9 @@ String* convert_rows_to_csv_text(List* rows) {
     String* ss = new_string();
     for (int i = 0; i < rows->len; ++i) {
 
-        List* row = (Row*) get(rows, i);
+        List* row = (Row*) l_get(rows, i);
         for (int j = 0; j < row->len; ++j) {
-            char* cell = (char*) get(row, j);
+            char* cell = (char*) l_get(row, j);
             append(ss, cell);
             if (j < row->len-1) 
                 append(ss, ",");
@@ -221,9 +221,9 @@ Row* parse_row(String* str) {
     String** cells = split(str, ",", &num_splits);
     for (int c = 0; c < num_splits; ++c) {
         char* cell_str = free_string_str(cells[c]);
-        push(row->cells, cell_str);
+        l_push(row->cells, cell_str);
     }
-    row->key = (char*) get(row->cells, 0);
+    row->key = (char*) l_get(row->cells, 0);
     free(cells);
 
     return row;
@@ -232,7 +232,7 @@ Row* parse_row(String* str) {
 String* row_to_str(Row* row) {
     String* str = new_string();
     for (int i = 0; i < row->cells->len; ++i) {
-        char* cell = get(row->cells, i);
+        char* cell = l_get(row->cells, i);
         append(str, cell);
         if (i < row->cells->len-1)
             append(str, ",");
@@ -243,7 +243,7 @@ String* row_to_str(Row* row) {
 
 void free_row(Row* row) {
     while (row->cells->len > 0) {
-        char* cell = pop(row->cells);
+        char* cell = l_pop(row->cells);
         free(cell);
     }
     // free(row->key); row->key is also a cell and is freed in the loop 
@@ -266,13 +266,13 @@ void free_database(CsvDb* db) {
     Element** tables = map_elements(db->table_name_to_table);
     for(int t = 0; t < db->table_name_to_table->len; ++t) {
         Element* ele = tables[t];
-        Table* table = (Table*) erase(db->table_name_to_table, ele->key);
+        Table* table = (Table*) m_erase(db->table_name_to_table, ele->key);
 
         // free rows
         Element** rows = map_elements(table->keys_to_rows);
         for (int r = 0; r < table->keys_to_rows->len; ++r) {
             Element* row_ele = rows[r];
-            Row* row = (Row*) at(table->keys_to_rows, row_ele->key);
+            Row* row = (Row*) m_get(table->keys_to_rows, row_ele->key);
             free_row(row);
         }
         free(rows);
@@ -283,7 +283,7 @@ void free_database(CsvDb* db) {
         Element** indices = map_elements(table->column_values_to_indices);
         for (int i = 0; i < table->column_values_to_indices->len; ++i) {
             Element* index_ele = indices[i];
-            Index* index = at(table->column_values_to_indices, index_ele->key);
+            Index* index = m_get(table->column_values_to_indices, index_ele->key);
             free(index->key);
             free(index);
         }
@@ -293,7 +293,7 @@ void free_database(CsvDb* db) {
 
         // free columns
         while (table->columns->len > 0) {
-            char* column = pop(table->columns);
+            char* column = l_pop(table->columns);
             free(column);
         }
         free_list(table->columns);
@@ -303,7 +303,7 @@ void free_database(CsvDb* db) {
         Element** columns = map_elements(table->columns_to_is_indexed);
         for (int i = 0; i < table->columns_to_is_indexed->len; ++i) {
             Element* ele = columns[i];
-            int* indexed = at(table->columns_to_is_indexed, ele->key);
+            int* indexed = m_get(table->columns_to_is_indexed, ele->key);
             free(indexed);
         }
         free(columns);
@@ -388,8 +388,8 @@ void load_csv(CsvDb* db, char* path) {
                     char* cell_str = free_string_str(cell);
                     int* indexed = malloc(sizeof(int));
                     *indexed = 0;
-                    push(table->columns, cell_str);
-                    insert(table->columns_to_is_indexed, cell_str, indexed, sizeof(int));
+                    l_push(table->columns, cell_str);
+                    m_put(table->columns_to_is_indexed, cell_str, indexed, sizeof(int));
                 }
             }
             else {
@@ -398,12 +398,12 @@ void load_csv(CsvDb* db, char* path) {
                 for (size_t x = 0; x < columns; ++x) {
                     String* cell = cells[x];
                     char* cell_str = free_string_str(cell);
-                    push(row->cells, cell_str);
+                    l_push(row->cells, cell_str);
                     if (x == 0) {
                         row->key = cell_str;
                     }
                 }
-                insert(table->keys_to_rows, row->key, row, sizeof(Row));
+                m_put(table->keys_to_rows, row->key, row, sizeof(Row));
             }
 
             free(cells);
@@ -434,7 +434,7 @@ void load_csv(CsvDb* db, char* path) {
     }
     
     // set in db map
-    insert(db->table_name_to_table, str(table_name_ss), table, sizeof(table));
+    m_put(db->table_name_to_table, str(table_name_ss), table, sizeof(table));
     free_string(table_name_ss);
     
 }
@@ -467,17 +467,17 @@ void table_write(CsvDb* db) {
         append(transaction_file_path, "/");
         append(transaction_file_path, file);
         char* trans_file_path_str = free_string_str(transaction_file_path);
-        push(transaction_files, trans_file_path_str);
+        l_push(transaction_files, trans_file_path_str);
     }
     closedir(dir);
-    sort(transaction_files, compare_file_names);
+    l_sort(transaction_files, compare_file_names);
 
 
     Map* transaction_tables_to_rows = new_map();
     Map* transaction_tables_to_delete_keys = new_map();
     for (int i = 0; i < transaction_files->len; ++i) {
 
-        char* file = get(transaction_files, i);
+        char* file = l_get(transaction_files, i);
 
         // collect rows from transaction files
         size_t num_lines;
@@ -498,20 +498,20 @@ void table_write(CsvDb* db) {
                     if (table_name != NULL) free(table_name);
                     table_name = free_string_str(table_name_ss);
 
-                    if (contains(transaction_tables_to_rows, table_name)) {
-                        keys_to_rows = at(transaction_tables_to_rows, table_name);
+                    if (m_contains(transaction_tables_to_rows, table_name)) {
+                        keys_to_rows = m_get(transaction_tables_to_rows, table_name);
                     }
                     else {
                         keys_to_rows = new_map();
-                        insert(transaction_tables_to_rows, table_name, keys_to_rows, sizeof(Map));
+                        m_put(transaction_tables_to_rows, table_name, keys_to_rows, sizeof(Map));
                     }
 
-                    if (contains(transaction_tables_to_delete_keys, table_name)) {
-                        delete_keys = at(transaction_tables_to_delete_keys, table_name);
+                    if (m_contains(transaction_tables_to_delete_keys, table_name)) {
+                        delete_keys = m_get(transaction_tables_to_delete_keys, table_name);
                     }
                     else {
                         delete_keys = new_set();
-                        insert(transaction_tables_to_delete_keys, table_name, delete_keys, sizeof(List));
+                        m_put(transaction_tables_to_delete_keys, table_name, delete_keys, sizeof(List));
                     }
                 }
                 else if (starts_with(line, "DELETE")) {
@@ -520,13 +520,13 @@ void table_write(CsvDb* db) {
                     String* key_s = splits[1];
                     char* key = str_c(key_s); 
 
-                    add(delete_keys, key);
-                    erase(keys_to_rows, key);
+                    s_add(delete_keys, key);
+                    m_erase(keys_to_rows, key);
                     free_strings(splits, num_splits);
                 }
                 else {
                     Row* row = parse_row(line);
-                    insert(keys_to_rows, row->key, row, sizeof(row));
+                    m_put(keys_to_rows, row->key, row, sizeof(row));
                 }
             }
             free_string(line);
@@ -544,7 +544,7 @@ void table_write(CsvDb* db) {
         char* table_name = table_ele->key;
         Table* table = (Table*) table_ele->data;
 
-        if (contains(transaction_tables_to_rows, table_name)) {
+        if (m_contains(transaction_tables_to_rows, table_name)) {
             FILE *file = fopen(table->csv_path, "r");
             if (file == NULL) {
                 perror("Failed to open file");
@@ -556,7 +556,7 @@ void table_write(CsvDb* db) {
             append(new_table_path, "/");
             append(new_table_path, table_name);
             append(new_table_path, ".csv");
-            insert(table_name_to_temp_tables, table_name, str_c(new_table_path), sizeof(char*));
+            m_put(table_name_to_temp_tables, table_name, str_c(new_table_path), sizeof(char*));
 
             FILE* tmp_file = fopen(str(new_table_path), "a");
             if (tmp_file == NULL) {
@@ -566,21 +566,21 @@ void table_write(CsvDb* db) {
             }
 
             String* line = read_line(file);
-            Map* transaction_keys_to_rows = at(transaction_tables_to_rows, table_name);
-            Set* keys_in_to_delete = at(transaction_tables_to_delete_keys, table_name);
+            Map* transaction_keys_to_rows = m_get(transaction_tables_to_rows, table_name);
+            Set* keys_in_to_delete = m_get(transaction_tables_to_delete_keys, table_name);
             while(line != NULL) {
 
                 Row* row = parse_row(line);
-                if (contains(transaction_keys_to_rows, row->key)) {
-                    Row* trans_row = at(transaction_keys_to_rows, row->key);
+                if (m_contains(transaction_keys_to_rows, row->key)) {
+                    Row* trans_row = m_get(transaction_keys_to_rows, row->key);
                     String* row_str = row_to_str(trans_row);
                     fprintf(tmp_file, str(row_str));
                     free_string(row_str);
-                    erase(transaction_keys_to_rows, trans_row->key);
+                    m_erase(transaction_keys_to_rows, trans_row->key);
                     free_row(trans_row);
                     fprintf(tmp_file, "\n");
                 }
-                else if (has(keys_in_to_delete, row->key)) {
+                else if (s_contains(keys_in_to_delete, row->key)) {
                     // nothing (don't write)
                 }
                 else {
@@ -623,7 +623,7 @@ void table_write(CsvDb* db) {
         char* table_name = ele->key;
         char* tmp_path = (char*) ele->data;
 
-        Table* table = at(db->table_name_to_table, table_name);
+        Table* table = m_get(db->table_name_to_table, table_name);
         
         if (rename(tmp_path, table->csv_path) != 0) {
             perror("Error csv file with tmp file");
@@ -638,7 +638,7 @@ void table_write(CsvDb* db) {
 
     // delete transaction files
     while (transaction_files->len > 0) {
-        char* transaction_file = pop(transaction_files);
+        char* transaction_file = l_pop(transaction_files);
         if (remove(transaction_file) != 0) {
             perror("Error deleting transaction file");
             exit(EXIT_FAILURE);
@@ -692,20 +692,20 @@ void table_write(CsvDb* db) {
 
     ```
     List* row1 = new_list();
-    push(row1, "user_3412351234");
-    push(row1, "bob@gmail.com");
+    l_push(row1, "user_3412351234");
+    l_push(row1, "bob@gmail.com");
 
     List* row2 = new_list();
-    push(row1, "user_9348102348");
-    push(row1, "sarah@gmail.com");
+    l_push(row1, "user_9348102348");
+    l_push(row1, "sarah@gmail.com");
 
     List* rows = new_list();
-    push(rows, row1);
-    push(rows, row2);
+    l_push(rows, row1);
+    l_push(rows, row2);
 
     Map* table_name_to_rows = new_map();
     char* table_name = "my_table";
-    insert(table_name_to_rows, table_name, rows, sizeof(rows));
+    m_put(table_name_to_rows, table_name, rows, sizeof(rows));
     
     transaction(db, table_name_to_rows);
     
@@ -804,7 +804,7 @@ void transaction(CsvDb* db, Map* table_name_to_rows, Map* table_name_to_keys_to_
         List* rows = (List*) ele->data;
 
         // create new table if needed
-        Table* table = at(db->table_name_to_table, table_name);
+        Table* table = m_get(db->table_name_to_table, table_name);
         if (table == NULL) {
             String* path = new_string();
             append(path, table_name);
@@ -812,42 +812,42 @@ void transaction(CsvDb* db, Map* table_name_to_rows, Map* table_name_to_keys_to_
             table = new_table(str(path));
             free_string(path);
 
-            insert(db->table_name_to_table, strdup(table_name), table, sizeof(Table));
+            m_put(db->table_name_to_table, strdup(table_name), table, sizeof(Table));
         }
 
         // insert rows
         for (int j = 0; j < rows->len; ++j) {
-            List* row = (List*) get(rows, j);
+            List* row = (List*) l_get(rows, j);
 
             // copy row
             Row* row_cpy = malloc(sizeof(Row));
-            char* row_key = (char*) get(row, 0);
+            char* row_key = (char*) l_get(row, 0);
             row_cpy->cells = new_list();
             for (int c = 0; c < row->len; ++c) {
                 char* cell_cpy = strdup(get(row, c));
-                push(row_cpy->cells, cell_cpy);
+                l_push(row_cpy->cells, cell_cpy);
             }
-            row_cpy->key = (char*) get(row_cpy->cells, 0);
-            if (contains(table->keys_to_rows, row_key)) {
-                Row* row = (Row*) erase(table->keys_to_rows, row_key);
+            row_cpy->key = (char*) l_get(row_cpy->cells, 0);
+            if (m_contains(table->keys_to_rows, row_key)) {
+                Row* row = (Row*) m_erase(table->keys_to_rows, row_key);
                 free_row(row);
             }
-            insert(table->keys_to_rows, row_key, row_cpy, sizeof(Row));
+            m_put(table->keys_to_rows, row_key, row_cpy, sizeof(Row));
         }
 
         // UPDATE INDICES
         for (int c = 0; c < table->columns->len; ++c) {
-            char* column = get(table->columns, c);
-            int* indexed = (int*) at(table->columns_to_is_indexed, column);
+            char* column = l_get(table->columns, c);
+            int* indexed = (int*) m_get(table->columns_to_is_indexed, column);
             if (*indexed) {
                 for (int j = 0; j < rows->len; ++j) {
-                    Row* row = (Row*) get(rows, j);
-                    Set* indices = (Set*) at(table->column_values_to_indices, column);
+                    Row* row = (Row*) l_get(rows, j);
+                    Set* indices = (Set*) m_get(table->column_values_to_indices, column);
                     if (indices == NULL) {
                         indices = new_set();
-                        insert(table->column_values_to_indices, column, indices, sizeof(Set));
+                        m_put(table->column_values_to_indices, column, indices, sizeof(Set));
                     }
-                    add(indices, row->key);
+                    s_add(indices, row->key);
                 }
             }
         }
@@ -860,8 +860,8 @@ void transaction(CsvDb* db, Map* table_name_to_rows, Map* table_name_to_keys_to_
         char* table_name = ele->key;
         char* key = (char*) ele->data;
 
-        Table* table = at(db->table_name_to_table, table_name);
-        erase(table->keys_to_rows, key);
+        Table* table = m_get(db->table_name_to_table, table_name);
+        m_erase(table->keys_to_rows, key);
     }
     free(delete_elements);
 

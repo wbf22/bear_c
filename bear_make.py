@@ -42,7 +42,7 @@ files are kept in the 'build' folder created when you run Bear Make.
 If the 'build' folder isn't in the current directory (deleted or moved)
 Bear Make will start over and make a clean
 
-When added files by name, you'll only need to include source or object files, not 
+When s_added files by name, you'll only need to include source or object files, not 
 header files (.hpp or .h)
 
 """
@@ -255,7 +255,7 @@ else:
                     os.makedirs(os.path.dirname(new_path), exist_ok=True)
                     shutil.move(object_file, new_path)
 
-                    # add hash
+                    # s_add hash
                     hash = hash_file_blake2b(file)
                     if file in hashes:
                         old_hash = hashes[file]
@@ -275,7 +275,7 @@ else:
                     file.write('\n')
             
 
-        # add user extra args
+        # s_add user extra args
         if len(flags) > 0:
             command.append(flags)
 
