@@ -320,7 +320,7 @@ static void insert_no_resize(Map* map, void* key, size_t key_size, void* data, s
         // copy the key
         char* key_copy = malloc(key_size);
         if (key_copy == NULL) {
-            list_mem_error_exit_failing();
+            map_mem_error_exit_failing();
         }
         memcpy(key_copy, key, key_size);
 
