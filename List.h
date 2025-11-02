@@ -344,6 +344,7 @@ void l_clear(List* list) {
 */
 void free_list(List* list) {
     // Free data
+    l_clear(list);
     free(list->data);
     // Free the struct itself
     free(list);
