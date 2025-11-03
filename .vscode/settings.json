@@ -11,6 +11,24 @@
         "set.h": "c",
         "csvdb.h": "c",
         "stdio.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "__config": "c",
+        "__hash_table": "c",
+        "array": "c",
+        "complex": "c",
+        "deque": "c",
+        "memory": "c",
+        "format": "c",
+        "functional": "c",
+        "istream": "c",
+        "locale": "c",
+        "mutex": "c",
+        "print": "c",
+        "string": "c",
+        "tuple": "c",
+        "unordered_map": "c",
+        "utility": "c",
+        "variant": "c",
+        "vector": "c"
     }
 }

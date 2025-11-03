@@ -247,7 +247,7 @@ void free_row(Row* row) {
         free(cell);
     }
     // free(row->key); row->key is also a cell and is freed in the loop 
-    free_list(row->cells);
+    free_list(row->cells, 0);
     free(row);
 }
 
@@ -276,7 +276,7 @@ void free_database(CsvDb* db) {
             free_row(row);
         }
         free(rows);
-        free_map(table->keys_to_rows);
+        free_map(table->keys_to_rows, 0);
 
 
         // free indices
@@ -288,7 +288,7 @@ void free_database(CsvDb* db) {
             free(index);
         }
         free(indices);
-        free_map(table->column_values_to_indices);
+        free_map(table->column_values_to_indices, 0);
 
 
         // free columns
@@ -296,7 +296,7 @@ void free_database(CsvDb* db) {
             char* column = l_pop(table->columns);
             free(column);
         }
-        free_list(table->columns);
+        free_list(table->columns, 0);
 
 
         // free columns_to_is_indexed
@@ -307,7 +307,7 @@ void free_database(CsvDb* db) {
             free(indexed);
         }
         free(columns);
-        free_map(table->columns_to_is_indexed);
+        free_map(table->columns_to_is_indexed, 0);
 
 
         // free table path
@@ -318,7 +318,7 @@ void free_database(CsvDb* db) {
         free(table);
     }
     free(tables);
-    free_map(db->table_name_to_table);
+    free_map(db->table_name_to_table, 0);
 
 
     Element** locks = map_elements(db->transaction_file_locks);
@@ -326,7 +326,7 @@ void free_database(CsvDb* db) {
         free(locks[l]);
     }
     free(locks);
-    free_map(db->transaction_file_locks);
+    free_map(db->transaction_file_locks, 0);
 
 
     free(db);
@@ -633,7 +633,7 @@ void table_write(CsvDb* db) {
         free(tmp_path);
     }
     free(table_name_tmps);
-    free_map(table_name_to_temp_tables);
+    free_map(table_name_to_temp_tables, 0);
 
 
     // delete transaction files
@@ -645,7 +645,7 @@ void table_write(CsvDb* db) {
         }
         free(transaction_file);
     }
-    free_list(transaction_files);
+    free_list(transaction_files, 0);
 
 
     // clean up transaction varaibles
@@ -661,7 +661,7 @@ void table_write(CsvDb* db) {
             free_row(row);
         }
         free(key_to_rows_elements);
-        free_map(key_to_rows);
+        free_map(key_to_rows, 0);
     }
     free(transaction_tables);
 
@@ -680,8 +680,8 @@ void table_write(CsvDb* db) {
     free(delete_tables);
 
     
-    free_map(transaction_tables_to_rows);
-    free_map(transaction_tables_to_delete_keys);
+    free_map(transaction_tables_to_rows, 0);
+    free_map(transaction_tables_to_delete_keys, 0);
 }
 
 /*
@@ -824,7 +824,7 @@ void transaction(CsvDb* db, Map* table_name_to_rows, Map* table_name_to_keys_to_
             char* row_key = (char*) l_get(row, 0);
             row_cpy->cells = new_list();
             for (int c = 0; c < row->len; ++c) {
-                char* cell_cpy = strdup(get(row, c));
+                char* cell_cpy = strdup(l_get(row, c));
                 l_push(row_cpy->cells, cell_cpy);
             }
             row_cpy->key = (char*) l_get(row_cpy->cells, 0);

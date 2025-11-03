@@ -96,7 +96,7 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
     b = *(int*) l_pop(list);
     assert(1 == b, "push pop same");
 
-    free_list(list);
+    free_list(list, 0);
 
 
 
@@ -154,7 +154,7 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
     b = *(int*) l_pop(list);
     assert(3 == b, "push pop same");
 
-    free_list(list);
+    free_list(list, 0);
     
 
 
@@ -226,10 +226,10 @@ void list_test_push_push_front_pop_pop_front_resize_get_set() {
     assert(*t == 4, "slice check");
     t = (int*) l_get(slice_list, -1);
     assert(*t == 5, "slice check");
-    free_list(slice_list);
+    free_list(slice_list, 0);
 
 
-    free_list(list);
+    free_list(list, 0);
 
 
 }
@@ -268,7 +268,7 @@ void map_resizing_all_methods() {
     }
     free(items);
 
-    free_map(map);
+    free_map(map, 0);
 
 
 
@@ -286,7 +286,7 @@ void map_resizing_all_methods() {
 
         free(data);
     }
-    free_map(map);
+    free_map(map, 0);
 
 
 
@@ -335,7 +335,7 @@ void map_resizing_all_methods() {
         printf("%d %d\n", i, count);
         free(ptr);
     }
-    free_map(checker);
+    free_map(checker, 0);
 
 }
 
@@ -445,11 +445,11 @@ int main() {
     
     transaction(db, table_name_to_rows, table_name_to_keys_to_delete);
 
-    free_map(table_name_to_rows);
-    free_map(table_name_to_keys_to_delete);
-    free_list(rows);
-    free_list(row1);
-    free_list(row2);
+    free_map(table_name_to_rows, 0);
+    free_map(table_name_to_keys_to_delete, 0);
+    free_list(rows, 0);
+    free_list(row1, 0);
+    free_list(row2, 0);
     
     free_database(db);
 
