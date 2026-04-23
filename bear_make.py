@@ -111,7 +111,9 @@ parser.add_argument('file', nargs='?', help='path to your make file')
 parser.add_argument('-eg', '--example', required=False, action='store_true', help='add this flag to output an example make file')
 parser.add_argument('-no', '--no_optimization', required=False, action='store_true', help='instead of keeping object files to speed up builds')
 parser.add_argument('-r', '--release', required=False, action='store_true', help='runs in release mode. otherwise optimization is off and the executable is built for debugging')
+parser.add_argument('-w', '--include_warnings', required=False, action='store_true', help='By default warnings aren\'t included. But this enables them')
 args = parser.parse_args()
+
 
 if args.example:
     print(example)
@@ -153,14 +155,27 @@ else:
                             flags = line.split('=')[1]
                             flags = extract_from_quotes(flags)
 
-                                
-
         except Exception as e:
             print("Error on line: ")
             print("\t" + red((str(e))))
             exit(1)
 
-
+    bear_minimum_warnings = [
+        "-w",
+        "-Wall",
+        "-Wextra", 
+        "-Wformat=2",
+        "-Wincompatible-pointer-types", 
+        "-Wimplicit-function-declaration", 
+        "-Wuninitialized", 
+        "-Wmaybe-uninitialized", 
+        "-Wnull-dereference", 
+        "-Wformat-security", 
+        "-Wswitch", 
+        "-Wfloat-equal", 
+        # "-fdiagnostics-show-option"
+    ]
+    warning_compile_flags = bear_minimum_warnings if not args.include_warnings else ["-Wall", "-Wextra", "-Wformat=2"]
     try:
         # all files
         for directory in directories:
@@ -176,7 +191,8 @@ else:
 
         command = ['gcc']
         if not args.release:
-            command += ['-g', '-O0', '-Wall', '-Wextra']
+            command += ['-g', '-O1']
+            command.extend(warning_compile_flags)
         
         command.append('-o')
         command.append(name)
@@ -240,7 +256,8 @@ else:
                     print(blue('COMPILING / RECOMPILING ') + file)
                     compile_command = ["gcc", "-c"]
                     if not args.release:
-                        compile_command += ['-g', '-O0']
+                        compile_command += ['-g', '-O1']
+                    compile_command.extend(warning_compile_flags)
                     compile_command.append(file)
                     print(green(' '.join(compile_command)))
                     result = subprocess.run(compile_command, capture_output=True, text=True)
